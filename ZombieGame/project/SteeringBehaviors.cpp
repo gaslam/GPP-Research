@@ -73,32 +73,20 @@ SteeringPlugin_Output Arrive::CalculateSteering(float deltaT, AgentInfo& pAgent)
 	const Elite::Vector2 direction{ m_Target.Position - agentPos };
 	const float distance{ direction.MagnitudeSquared() };
 
+	if (distance < m_Radius * m_Radius)
+	{
+		steering.LinearVelocity.Normalize();
+		steering.LinearVelocity *= m_SlowSpeed;
+		steering.AngularVelocity = 0.f;
+		return steering;
+	}
 
 	if (distance < m_SlowRadius * m_SlowRadius)
 	{
-		if (!m_IsCurrentSpeedSet)
-		{
-			m_CurrentSpeed = pAgent.MaxLinearSpeed;
-			m_IsCurrentSpeedSet = true;
-		}
-		pAgent.MaxLinearSpeed = m_SlowSpeed;
-	}
-
-	if (distance > m_Radius * m_Radius)
-	{
 		steering.LinearVelocity = direction;
 		steering.LinearVelocity.Normalize();
-		steering.LinearVelocity *= pAgent.MaxLinearSpeed;
-	}
-	else
-	{
-		if (m_IsCurrentSpeedSet)
-		{
-			pAgent.MaxLinearSpeed = m_CurrentSpeed;
-			m_IsCurrentSpeedSet = false;
-			steering.LinearVelocity = Elite::ZeroVector2;
-			steering.AngularVelocity = 0.f;
-		}
+		steering.LinearVelocity *= m_SlowSpeed;
+		return steering;
 	}
 
 	return steering;

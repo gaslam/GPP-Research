@@ -61,7 +61,7 @@ namespace BT_Actions
 
 		pSteering = pWanderAndSeek;
 
-		if (!pBlackboard->ChangeData("WanderAndSeek", pWanderAndSeek))
+		if (!pBlackboard->ChangeData("SteeringBehavior", pSteering))
 		{
 			return BehaviorState::Failure;
 		}
@@ -102,6 +102,11 @@ namespace BT_Actions
 		pArrive->SetTarget(target);
 
 		pSteering = pArrive;
+
+		if (!pBlackboard->ChangeData("SteeringBehavior", pSteering))
+		{
+			return BehaviorState::Failure;
+		}
 
 		return BehaviorState::Success;
 	}

@@ -39,19 +39,15 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	m_pBlackboard->AddData("Target", m_Target);
 	m_pBlackboard->AddData("Arrive", m_pArrive);
 
-	BehaviorSelector* pIsTargetNearby{
-	new BehaviorSelector(
-	{
+	BehaviorSequence* pPursueSmallerEnemy{
 		new BehaviorSequence({
+			new BehaviorAction(BT_Actions::ChangeToSeekAndWander),
 		new BehaviorConditional(BT_Conditions::IsTargetInRadius),
-			new BehaviorAction(BT_Actions::ChangeToArrive)
-		}),
-		new BehaviorAction(BT_Actions::ChangeToSeekAndWander)
-	}
-) };
+		new BehaviorAction(BT_Actions::ChangeToArrive),
+	}) };
 
 	m_pDecisionMaking = new Elite::BehaviorTree{ m_pBlackboard,
-		pIsTargetNearby
+		pPursueSmallerEnemy
 	};
 }
 
@@ -173,6 +169,10 @@ SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 	m_pDecisionMaking->Update(dt);
 
 	auto nextTargetPos = m_pInterface->NavMesh_GetClosestPathPoint(m_Target);
+	if (!m_pBlackboard->GetData("SteeringBehavior", m_pSteeringBehavior))
+	{
+		return{};
+	}
 	auto steering = m_pSteeringBehavior->CalculateSteering(dt, agentInfo);
 
 	//Use the navmesh to calculate the next navmesh point

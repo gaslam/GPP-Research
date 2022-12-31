@@ -74,10 +74,7 @@ public:
 private:
 	float m_Radius{8.f};
 	float m_SlowRadius{15.f};
-	float m_CurrentSpeed{};
 	float m_SlowSpeed{5.f};
-
-	bool m_IsCurrentSpeedSet{false};
 };
 
 class Face : public ISteeringBehavior
