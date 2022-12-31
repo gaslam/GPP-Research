@@ -1,6 +1,11 @@
 #include "stdafx.h"
 #include "Plugin.h"
 #include "IExamInterface.h"
+#include "EBlackboard.h"
+#include "SteeringBehaviors.h"
+#include "EBehaviorTree.h"
+#include "Behaviors.h"
+#include "CombinedSteeringBehaviors.h"
 
 using namespace std;
 
@@ -14,11 +19,54 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	//Bit information about the plugin
 	//Please fill this in!!
 	info.BotName = "MinionExam";
-	info.Student_FirstName = "Foo";
-	info.Student_LastName = "Bar";
-	info.Student_Class = "2DAEx";
+	info.Student_FirstName = "Gaspard";
+	info.Student_LastName = "Lammertyn";
+	info.Student_Class = "2DAE08";
+
+	m_pWander = new Wander{};
+	m_pSeek = new Seek{};
+	m_pArrive = new Arrive{};
+
+	m_pWanderAndSeek = new BlendedSteering{ {{m_pWander,0.6f},{m_pSeek,1.f}} };
+	m_pSteeringBehavior = m_pWanderAndSeek;
+
+	m_pBlackboard = new Elite::Blackboard{};
+	m_pBlackboard->AddData("Interface", m_pInterface);
+	m_pBlackboard->AddData("SteeringBehavior", m_pSteeringBehavior);
+	m_pBlackboard->AddData("WanderAndSeek", m_pWanderAndSeek);
+	m_pBlackboard->AddData("Wander", m_pWander);
+	m_pBlackboard->AddData("Seek", m_pSeek);
+	m_pBlackboard->AddData("Target", m_Target);
+	m_pBlackboard->AddData("Arrive", m_pArrive);
+
+	BehaviorSelector* pIsTargetNearby{
+	new BehaviorSelector(
+	{
+		new BehaviorSequence({
+		new BehaviorConditional(BT_Conditions::IsTargetInRadius),
+			new BehaviorAction(BT_Actions::ChangeToArrive)
+		}),
+		new BehaviorAction(BT_Actions::ChangeToSeekAndWander)
+	}
+) };
+
+	m_pDecisionMaking = new Elite::BehaviorTree{ m_pBlackboard,
+		pIsTargetNearby
+	};
 }
 
+
+Plugin::~Plugin()
+{
+	SAFE_DELETE(m_pBlackboard);
+	SAFE_DELETE(m_pWanderAndSeek);
+	SAFE_DELETE(m_pWander);
+	SAFE_DELETE(m_pSeek);
+	SAFE_DELETE(m_pArrive);
+	//SAFE_DELETE(m_pInterface);
+	//SAFE_DELETE(m_pSteeringBehavior);
+	//SAFE_DELETE(m_pDecisionMaking);
+}
 //Called only once
 void Plugin::DllInit()
 {
@@ -63,6 +111,7 @@ void Plugin::Update(float dt)
 		Elite::MouseData mouseData = m_pInterface->Input_GetMouseData(Elite::InputType::eMouseButton, Elite::InputMouseButton::eLeft);
 		const Elite::Vector2 pos = Elite::Vector2(static_cast<float>(mouseData.X), static_cast<float>(mouseData.Y));
 		m_Target = m_pInterface->Debug_ConvertScreenToWorld(pos);
+		m_pBlackboard->ChangeData("Target", m_Target);
 	}
 	else if (m_pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_Space))
 	{
@@ -118,17 +167,19 @@ void Plugin::Update(float dt)
 //This function calculates the new SteeringOutput, called once per frame
 SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 {
-	auto steering = SteeringPlugin_Output();
-	
+
 	//Use the Interface (IAssignmentInterface) to 'interface' with the AI_Framework
 	auto agentInfo = m_pInterface->Agent_GetInfo();
+	m_pDecisionMaking->Update(dt);
 
+	auto nextTargetPos = m_pInterface->NavMesh_GetClosestPathPoint(m_Target);
+	auto steering = m_pSteeringBehavior->CalculateSteering(dt, agentInfo);
 
 	//Use the navmesh to calculate the next navmesh point
 	//auto nextTargetPos = m_pInterface->NavMesh_GetClosestPathPoint(checkpointLocation);
 
 	//OR, Use the mouse target
-	auto nextTargetPos = m_pInterface->NavMesh_GetClosestPathPoint(m_Target); //Uncomment this to use mouse position as guidance
+	//Uncomment this to use mouse position as guidance
 
 	auto vHousesInFOV = GetHousesInFOV();//uses m_pInterface->Fov_GetHouseByIndex(...)
 	auto vEntitiesInFOV = GetEntitiesInFOV(); //uses m_pInterface->Fov_GetEntityByIndex(...)
@@ -153,6 +204,7 @@ SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 		//Keep in mind that DebugParams are only used for debugging purposes, by default this flag is FALSE
 		//Otherwise, use GetEntitiesInFOV() to retrieve a vector of all entities in the FOV (EntityInfo)
 		//Item_Grab gives you the ItemInfo back, based on the passed EntityHash (retrieved by GetEntitiesInFOV)
+		GetEntitiesInFOV();
 		if (m_pInterface->Item_Grab({}, item))
 		{
 			//Once grabbed, you can add it to a specific inventory slot
@@ -174,14 +226,14 @@ SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 	}
 
 	//Simple Seek Behaviour (towards Target)
-	steering.LinearVelocity = nextTargetPos - agentInfo.Position; //Desired Velocity
-	steering.LinearVelocity.Normalize(); //Normalize Desired Velocity
-	steering.LinearVelocity *= agentInfo.MaxLinearSpeed; //Rescale to Max Speed
+	//steering.LinearVelocity = nextTargetPos - agentInfo.Position; //Desired Velocity
+	//steering.LinearVelocity.Normalize(); //Normalize Desired Velocity
+	//steering.LinearVelocity *= agentInfo.MaxLinearSpeed; //Rescale to Max Speed
 
-	if (Distance(nextTargetPos, agentInfo.Position) < 2.f)
-	{
-		steering.LinearVelocity = Elite::ZeroVector2;
-	}
+	//if (Distance(nextTargetPos, agentInfo.Position) < 2.f)
+	//{
+	//	steering.LinearVelocity = Elite::ZeroVector2;
+	//}
 
 	//steering.AngularVelocity = m_AngSpeed; //Rotate your character to inspect the world while walking
 	steering.AutoOrient = true; //Setting AutoOrient to TRue overrides the AngularVelocity

@@ -5,7 +5,7 @@ class IExamInterface: public IBaseInterface
 {
 public:
 	IExamInterface();
-	~IExamInterface();
+	~IExamInterface() = default;
 
 	//WORLD & ENTITIES
 	virtual WorldInfo World_GetInfo() const = 0;

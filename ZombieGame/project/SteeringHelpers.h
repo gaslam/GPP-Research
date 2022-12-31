@@ -73,62 +73,6 @@ struct SteeringParams //Also used as Target for SteeringBehaviors
 };
 using TargetData = SteeringParams; //Alias for SteeringBehavior usage (Bit clearer in its context ;) )
 
-//SteeringOutput
-struct SteeringOutput
-{
-	Elite::Vector2 LinearVelocity = { 0.f,0.f };
-	float AngularVelocity = 0.f;
-	bool IsValid = true;
-
-	SteeringOutput(Elite::Vector2 linVel = { 0.f,0.f }, float angVel = 0.f, bool isValid = true)
-	{
-		LinearVelocity = linVel;
-		AngularVelocity = angVel;
-		IsValid = isValid;
-	}
-
-	SteeringOutput& operator=(const SteeringOutput& other)
-	{
-		LinearVelocity = other.LinearVelocity;
-		AngularVelocity = other.AngularVelocity;
-		IsValid = other.IsValid;
-
-		return *this;
-	}
-
-	SteeringOutput& operator+(const SteeringOutput& other)
-	{
-		LinearVelocity += other.LinearVelocity;
-		AngularVelocity += other.AngularVelocity;
-
-		return *this;
-	}
-
-	SteeringOutput& operator*=(const SteeringOutput& other)
-	{
-		LinearVelocity = LinearVelocity * other.LinearVelocity;
-		AngularVelocity = AngularVelocity * other.AngularVelocity;
-
-		return *this;
-	}
-
-	SteeringOutput& operator*=(float f)
-	{
-		LinearVelocity = f * LinearVelocity;
-		AngularVelocity = f * AngularVelocity;
-
-		return *this;
-	}
-
-	SteeringOutput& operator/=(float f)
-	{
-		LinearVelocity = LinearVelocity / f;
-		AngularVelocity = AngularVelocity / f;
-
-		return *this;
-	}
-};
-
 //=== TEMPORARILY ADDED HERE - IS PART OF COMBINED STEERING! ===
 struct Goal
 {

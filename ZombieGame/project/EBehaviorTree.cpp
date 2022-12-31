@@ -115,7 +115,7 @@ BehaviorState BehaviorConditional::Execute(Blackboard* pBlackBoard)
 		m_CurrentState = BehaviorState::Success;
 		return m_CurrentState;
 	case false:
-		m_CurrentState = m_CurrentState = BehaviorState::Failure;
+		m_CurrentState = BehaviorState::Failure;
 		return m_CurrentState;
 	}
 
