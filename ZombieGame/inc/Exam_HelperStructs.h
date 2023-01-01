@@ -8,15 +8,6 @@ struct SteeringPlugin_Output
 	float AngularVelocity = 0.f;
 	bool AutoOrient = true;
 	bool RunMode = false;
-	bool IsValid = false;
-
-	SteeringPlugin_Output& operator*=(float f)
-	{
-		LinearVelocity = f * LinearVelocity;
-		AngularVelocity = f * AngularVelocity;
-
-		return *this;
-	}
 };
 
 struct PluginInfo
@@ -185,6 +176,5 @@ struct AgentInfo
 	float MaxAngularSpeed;
 	float GrabRange;
 	float AgentSize;
-	bool AutoOrient{true};
 };
 #pragma endregion

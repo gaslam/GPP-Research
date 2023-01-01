@@ -1,4 +1,5 @@
 #pragma once
+#include "../inc/Exam_HelperStructs.h"
 
 //SteeringParams (alias TargetData)
 struct SteeringParams //Also used as Target for SteeringBehaviors
@@ -103,5 +104,18 @@ struct Goal
 	bool CanMergeGoal(const Goal& goal) const
 	{
 		return !(PositionSet && goal.PositionSet);
+	}
+};
+
+struct SteeringPlugin_Output_Extended : SteeringPlugin_Output
+{
+	bool IsValid = false;
+
+	SteeringPlugin_Output_Extended& operator*=(float f)
+	{
+		LinearVelocity = f * LinearVelocity;
+		AngularVelocity = f * AngularVelocity;
+
+		return *this;
 	}
 };

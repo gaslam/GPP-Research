@@ -3,13 +3,12 @@
 
 //Includes
 #include "SteeringBehaviors.h"
-#include "../inc/Exam_HelperStructs.h"
 
 //SEEK
 //****
-SteeringPlugin_Output Seek::CalculateSteering(float deltaT, AgentInfo& pAgent)
+SteeringPlugin_Output_Extended Seek::CalculateSteering(float deltaT, AgentInfo& pAgent)
 {
-	SteeringPlugin_Output steering = {};
+	SteeringPlugin_Output_Extended steering = {};
 	const auto agentPos{ pAgent.Position };
 	steering.LinearVelocity = m_Target.Position - agentPos;
 	steering.LinearVelocity.Normalize();
@@ -23,10 +22,10 @@ SteeringPlugin_Output Seek::CalculateSteering(float deltaT, AgentInfo& pAgent)
 	return steering;
 }
 
-SteeringPlugin_Output Flee::CalculateSteering(float deltaT, AgentInfo& pAgent)
+SteeringPlugin_Output_Extended Flee::CalculateSteering(float deltaT, AgentInfo& pAgent)
 {
 
-	SteeringPlugin_Output steering = {};
+	SteeringPlugin_Output_Extended steering = {};
 
 	const Elite::Vector2 agentPos{ pAgent.Position };
 
@@ -41,7 +40,7 @@ SteeringPlugin_Output Flee::CalculateSteering(float deltaT, AgentInfo& pAgent)
 	return steering;
 }
 
-void Flee::FleeFromTarget(AgentInfo& pAgent, SteeringPlugin_Output& output, const Elite::Vector2 targetPos) const
+void Flee::FleeFromTarget(AgentInfo& pAgent, SteeringPlugin_Output_Extended& output, const Elite::Vector2 targetPos) const
 {
 	const Elite::Vector2 direction{ pAgent.Position - targetPos };
 	const float distanceSquared{ direction.MagnitudeSquared() };
@@ -58,9 +57,9 @@ void Flee::FleeFromTarget(AgentInfo& pAgent, SteeringPlugin_Output& output, cons
 	}
 }
 
-SteeringPlugin_Output Arrive::CalculateSteering(float deltaT, AgentInfo& pAgent)
+SteeringPlugin_Output_Extended Arrive::CalculateSteering(float deltaT, AgentInfo& pAgent)
 {
-	SteeringPlugin_Output steering{  };
+	SteeringPlugin_Output_Extended steering{  };
 
 	const Elite::Vector2 agentPos{ pAgent.Position };
 
@@ -92,24 +91,24 @@ SteeringPlugin_Output Arrive::CalculateSteering(float deltaT, AgentInfo& pAgent)
 	return steering;
 }
 
-SteeringPlugin_Output Face::CalculateSteering(float deltaT, AgentInfo& pAgent)
+SteeringPlugin_Output_Extended Face::CalculateSteering(float deltaT, AgentInfo& pAgent)
 {
-	SteeringPlugin_Output steering{};
+	SteeringPlugin_Output_Extended steering{};
 	const float rotation{ pAgent.Orientation };
 	const Elite::Vector2 agentPos{ pAgent.Position };
 	const Elite::Vector2 directionAgent{ cosf(rotation), sinf(rotation) };
 	const Elite::Vector2 directionTarget{ agentPos - m_Target.Position };
 
 
-	pAgent.AutoOrient = true;
+	steering.AutoOrient = true;
 	steering.AngularVelocity = Elite::ToRadians(Elite::AngleBetween(directionTarget, directionAgent)) * pAgent.MaxAngularSpeed;
 
 	return steering;
 }
 
-SteeringPlugin_Output Wander::CalculateSteering(float deltaT, AgentInfo& pAgent)
+SteeringPlugin_Output_Extended Wander::CalculateSteering(float deltaT, AgentInfo& pAgent)
 {
-	SteeringPlugin_Output steering{  };
+	SteeringPlugin_Output_Extended steering{  };
 	const float rotation{ pAgent.Orientation };
 	const Elite::Vector2 agentPos{ pAgent.Position };
 	Elite::Vector2 circleCenter{ agentPos + Elite::Vector2(cosf(rotation) * m_OffsetDistance, sinf(rotation) * m_OffsetDistance) };
@@ -144,9 +143,9 @@ SteeringPlugin_Output Wander::CalculateSteering(float deltaT, AgentInfo& pAgent)
 }
 
 
-SteeringPlugin_Output Pursuit::CalculateSteering(float deltaT, AgentInfo& pAgent)
+SteeringPlugin_Output_Extended Pursuit::CalculateSteering(float deltaT, AgentInfo& pAgent)
 {
-	SteeringPlugin_Output steering{};
+	SteeringPlugin_Output_Extended steering{};
 	const Elite::Vector2 targetPos{ m_Target.Position };
 	const Elite::Vector2 agentPos{ pAgent.Position };
 	const float distance{ (targetPos - agentPos).MagnitudeSquared() };
@@ -164,9 +163,9 @@ SteeringPlugin_Output Pursuit::CalculateSteering(float deltaT, AgentInfo& pAgent
 
 
 //Set point in the middle to avoid target from moving in between the agent
-SteeringPlugin_Output Evade::CalculateSteering(float deltaT, AgentInfo& pAgent)
+SteeringPlugin_Output_Extended Evade::CalculateSteering(float deltaT, AgentInfo& pAgent)
 {
-	SteeringPlugin_Output steering{};
+	SteeringPlugin_Output_Extended steering{};
 	const Elite::Vector2 targetPos{ m_Target.Position };
 	const Elite::Vector2 agentPos{ pAgent.Position };
 	const float distance{ (targetPos - agentPos).MagnitudeSquared() };

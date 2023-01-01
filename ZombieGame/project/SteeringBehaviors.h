@@ -12,7 +12,7 @@
 //-----------------------------------------------------------------
 #include "SteeringHelpers.h"
 struct AgentInfo;
-struct SteeringPlugin_Output;
+struct SteeringPlugin_Output_Extended;
 
 #pragma region **ISTEERINGBEHAVIOR** (BASE)
 class ISteeringBehavior
@@ -21,7 +21,7 @@ public:
 	ISteeringBehavior() = default;
 	virtual ~ISteeringBehavior() = default;
 
-	virtual SteeringPlugin_Output CalculateSteering(float deltaT, AgentInfo& pAgent) = 0;
+	virtual SteeringPlugin_Output_Extended CalculateSteering(float deltaT, AgentInfo& pAgent) = 0;
 
 	//Seek Functions
 	void SetTarget(const TargetData& target) { m_Target = target; }
@@ -45,7 +45,7 @@ public:
 	virtual ~Seek() = default;
 
 	//Seek Behaviour
-	SteeringPlugin_Output CalculateSteering(float deltaT, AgentInfo& pAgent) override;
+	SteeringPlugin_Output_Extended CalculateSteering(float deltaT, AgentInfo& pAgent) override;
 };
 
 class Flee : public ISteeringBehavior
@@ -54,12 +54,12 @@ public:
 	explicit Flee() = default;
 	virtual ~Flee() = default;
 
-	SteeringPlugin_Output CalculateSteering(float deltaT, AgentInfo& pAgent) override;
+	SteeringPlugin_Output_Extended CalculateSteering(float deltaT, AgentInfo& pAgent) override;
 private:
 	float m_Radius = 20.f;
 
 protected:
-	void FleeFromTarget(AgentInfo& pAgent, SteeringPlugin_Output& output, const Elite::Vector2 targetPos) const;
+	void FleeFromTarget(AgentInfo& pAgent, SteeringPlugin_Output_Extended& output, const Elite::Vector2 targetPos) const;
 };
 
 class Arrive : public ISteeringBehavior
@@ -67,7 +67,7 @@ class Arrive : public ISteeringBehavior
 public:
 	Arrive() = default;
 	virtual ~Arrive() = default;
-	SteeringPlugin_Output CalculateSteering(float deltaT, AgentInfo& pAgent) override;
+	SteeringPlugin_Output_Extended CalculateSteering(float deltaT, AgentInfo& pAgent) override;
 	void SetSlowRadius(float radius) { m_SlowRadius = radius; }
 	void SetTargetRadius(float radius) { m_Radius = radius; }
 
@@ -82,7 +82,7 @@ class Face : public ISteeringBehavior
 public:
 	Face() = default;
 	virtual ~Face() = default;
-	SteeringPlugin_Output CalculateSteering(float deltaT, AgentInfo& pAgent) override;
+	SteeringPlugin_Output_Extended CalculateSteering(float deltaT, AgentInfo& pAgent) override;
 private:
 };
 
@@ -93,7 +93,7 @@ public:
 	virtual ~Wander() = default;
 
 	//Wander Behavior
-	SteeringPlugin_Output CalculateSteering(float deltaT, AgentInfo& pAgent) override;
+	SteeringPlugin_Output_Extended CalculateSteering(float deltaT, AgentInfo& pAgent) override;
 
 	void SetWanderOffset(float offset) { m_OffsetDistance = offset; }
 	void SetWanderRadius(float radius) { m_Radius = radius; }
@@ -111,7 +111,7 @@ class Pursuit : public ISteeringBehavior
 public:
 	Pursuit() = default;
 	virtual ~Pursuit() = default;
-	SteeringPlugin_Output CalculateSteering(float deltaT, AgentInfo& pAgent) override;
+	SteeringPlugin_Output_Extended CalculateSteering(float deltaT, AgentInfo& pAgent) override;
 
 };
 
@@ -120,7 +120,7 @@ class Evade : public ISteeringBehavior
 public:
 	Evade() = default;
 	virtual ~Evade() = default;
-	SteeringPlugin_Output CalculateSteering(float deltaT, AgentInfo& pAgent) override;
+	SteeringPlugin_Output_Extended CalculateSteering(float deltaT, AgentInfo& pAgent) override;
 	void SetRadius(float radius) { m_Radius = radius; }
 protected:
 	float m_Radius{ 15.f };

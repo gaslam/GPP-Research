@@ -1,7 +1,6 @@
 #include "stdafx.h"
 #include "CombinedSteeringBehaviors.h"
 #include <algorithm>
-#include "../inc/Exam_HelperStructs.h"
 
 BlendedSteering::BlendedSteering(std::vector<WeightedBehavior> weightedBehaviors)
 	:m_WeightedBehaviors(weightedBehaviors)
@@ -10,9 +9,9 @@ BlendedSteering::BlendedSteering(std::vector<WeightedBehavior> weightedBehaviors
 
 //****************
 //BLENDED STEERING
-SteeringPlugin_Output BlendedSteering::CalculateSteering(float deltaT, AgentInfo& pAgent)
+SteeringPlugin_Output_Extended BlendedSteering::CalculateSteering(float deltaT, AgentInfo& pAgent)
 {
-	SteeringPlugin_Output blendedSteering = {};
+	SteeringPlugin_Output_Extended blendedSteering = {};
 	auto totalWeight = 0.f;
 
 	for (auto weightedBehavior : m_WeightedBehaviors)
@@ -38,9 +37,9 @@ SteeringPlugin_Output BlendedSteering::CalculateSteering(float deltaT, AgentInfo
 
 //*****************
 //PRIORITY STEERING
-SteeringPlugin_Output PrioritySteering::CalculateSteering(float deltaT, AgentInfo& pAgent)
+SteeringPlugin_Output_Extended PrioritySteering::CalculateSteering(float deltaT, AgentInfo& pAgent)
 {
-	SteeringPlugin_Output steering = {};
+	SteeringPlugin_Output_Extended steering = {};
 
 	for (auto pBehavior : m_PriorityBehaviors)
 	{
