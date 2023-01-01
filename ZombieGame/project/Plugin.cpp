@@ -23,24 +23,18 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	info.Student_LastName = "Lammertyn";
 	info.Student_Class = "2DAE08";
 
-	m_pWander = new Wander{};
-	m_pSeek = new Seek{};
-	m_pArrive = new Arrive{};
-	m_pEvade = new Evade{};
+	m_pBehaviors->pWander = new Wander{};
+	m_pBehaviors->pSeek = new Seek{};
+	m_pBehaviors->pArrive = new Arrive{};
+	m_pBehaviors->pEvade = new Evade{};
 
-	m_pWanderAndSeek = new BlendedSteering{ {{m_pWander,0.6f},{m_pSeek,1.f}} };
-	m_pSteeringBehavior = m_pWanderAndSeek;
+	m_pBehaviors->pWanderAndSeek = new BlendedSteering{ {{m_pBehaviors->pWander,0.6f},{m_pBehaviors->pSeek,1.f}} };
 
 	m_pBlackboard = new Elite::Blackboard{};
 	m_pBlackboard->AddData("Interface", m_pInterface);
-	m_pBlackboard->AddData("SteeringBehavior", m_pSteeringBehavior);
-	m_pBlackboard->AddData("WanderAndSeek", m_pWanderAndSeek);
-	m_pBlackboard->AddData("Wander", m_pWander);
-	m_pBlackboard->AddData("Seek", m_pSeek);
-	m_pBlackboard->AddData("Target", m_Target);
+	m_pBlackboard->AddData("Behaviors", m_pBehaviors);
+	m_pBlackboard->AddData("SelectedBehavior", m_pBehaviors->pWanderAndSeek);
 	m_pBlackboard->AddData("AgentFleeTarget", Elite::Vector2());
-	m_pBlackboard->AddData("Evade", m_pEvade);
-	m_pBlackboard->AddData("Arrive", m_pArrive);
 
 	BehaviorSequence* pMoveToTarget{
 		new BehaviorSequence({
@@ -54,7 +48,7 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 			new BehaviorAction(BT_Actions::ChangeToEvade)
 		}) };
 
-	m_pDecisionMaking = new Elite::BehaviorTree{ m_pBlackboard,
+	m_pBehaviors->pDecisionMaking = new Elite::BehaviorTree{ m_pBlackboard,
 		new BehaviorSelector(
 			{
 				pEvadeEnemy,
@@ -68,10 +62,10 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 Plugin::~Plugin()
 {
 	SAFE_DELETE(m_pBlackboard);
-	SAFE_DELETE(m_pWanderAndSeek);
-	SAFE_DELETE(m_pWander);
-	SAFE_DELETE(m_pSeek);
-	SAFE_DELETE(m_pArrive);
+	SAFE_DELETE(m_pBehaviors->pWanderAndSeek);
+	SAFE_DELETE(m_pBehaviors->pWander);
+	SAFE_DELETE(m_pBehaviors->pSeek);
+	SAFE_DELETE(m_pBehaviors->pArrive);
 	//SAFE_DELETE(m_pInterface);
 	//SAFE_DELETE(m_pSteeringBehavior);
 	//SAFE_DELETE(m_pDecisionMaking);
@@ -179,14 +173,15 @@ SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 
 	//Use the Interface (IAssignmentInterface) to 'interface' with the AI_Framework
 	auto agentInfo = m_pInterface->Agent_GetInfo();
-	m_pDecisionMaking->Update(dt);
+	m_pBehaviors->pDecisionMaking->Update(dt);
 
 	auto nextTargetPos = m_pInterface->NavMesh_GetClosestPathPoint(m_Target);
-	if (!m_pBlackboard->GetData("SteeringBehavior", m_pSteeringBehavior))
+	ISteeringBehavior* pBehavior;
+	if (!m_pBlackboard->GetData("SelectedBehavior", pBehavior))
 	{
 		return{};
 	}
-	auto steering = m_pSteeringBehavior->CalculateSteering(dt, agentInfo);
+	auto steering = pBehavior->CalculateSteering(dt, agentInfo);
 
 	//Use the navmesh to calculate the next navmesh point
 	//auto nextTargetPos = m_pInterface->NavMesh_GetClosestPathPoint(checkpointLocation);

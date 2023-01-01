@@ -107,6 +107,16 @@ struct Goal
 	}
 };
 
+struct SteeringBehaviors
+{
+	BlendedSteering* pWanderAndSeek = nullptr;
+	Wander* pWander = nullptr;
+	Seek* pSeek = nullptr;
+	Arrive* pArrive = nullptr;
+	Evade* pEvade = nullptr;
+	Elite::IDecisionMaking* pDecisionMaking{ nullptr };
+};
+
 struct SteeringPlugin_Output_Extended : SteeringPlugin_Output
 {
 	bool IsValid = false;

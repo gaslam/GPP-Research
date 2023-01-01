@@ -30,14 +30,9 @@ private:
 
 	Elite::Blackboard* m_pBlackboard = nullptr;
 	IExamInterface* m_pInterface = nullptr;
-	BlendedSteering* m_pWanderAndSeek = nullptr;
-	Wander* m_pWander = nullptr;
-	Seek* m_pSeek = nullptr;
-	Arrive* m_pArrive = nullptr;
-	Evade* m_pEvade = nullptr;
-	Elite::IDecisionMaking* m_pDecisionMaking{ nullptr };
 
-	ISteeringBehavior* m_pSteeringBehavior{};
+	SteeringBehaviors* m_pBehaviors{};
+
 	std::vector<HouseInfo> GetHousesInFOV() const;
 	std::vector<EntityInfo> GetEntitiesInFOV() const;
 

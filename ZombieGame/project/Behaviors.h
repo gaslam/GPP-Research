@@ -25,28 +25,22 @@ namespace BT_Actions
 {
 	inline BehaviorState ChangeToSeekAndWander(Blackboard* pBlackboard)
 	{
-		IExamInterface* pInterface{};
+		IExamInterface* pInterface{nullptr};
 		ISteeringBehavior* pSteering{ nullptr };
-		BlendedSteering* pWanderAndSeek{nullptr};
-		Seek* pSeek{ nullptr };
+		SteeringBehaviors* pBehaviors{nullptr};
 		Vector2 target{};
 
-		if (!pBlackboard->GetData("SteeringBehavior", pSteering) || pSteering == nullptr)
-		{
-			return BehaviorState::Failure;
-		}
-
-		if (!pBlackboard->GetData("WanderAndSeek", pWanderAndSeek) || pWanderAndSeek == nullptr)
-		{
-			return BehaviorState::Failure;
-		}
-
-		if (!pBlackboard->GetData("Seek", pSeek) || pSeek == nullptr)
+		if (!pBlackboard->GetData("SelectedBehavior", pSteering) || pSteering == nullptr)
 		{
 			return BehaviorState::Failure;
 		}
 
 		if (!pBlackboard->GetData("Interface", pInterface) || pInterface == nullptr)
+		{
+			return BehaviorState::Failure;
+		}
+
+		if (!pBlackboard->GetData("Behaviors", pBehaviors) || pBehaviors == nullptr)
 		{
 			return BehaviorState::Failure;
 		}
@@ -57,11 +51,11 @@ namespace BT_Actions
 		}
 
 		Vector2 nextTarget{ pInterface->NavMesh_GetClosestPathPoint(target) };
-		pSeek->SetTarget(nextTarget);
+		pBehaviors->pSeek->SetTarget(nextTarget);
 
-		pSteering = pWanderAndSeek;
+		pSteering = pBehaviors->pWanderAndSeek;
 
-		if (!pBlackboard->ChangeData("SteeringBehavior", pSteering))
+		if (!pBlackboard->ChangeData("SelectedBehavior", pSteering))
 		{
 			return BehaviorState::Failure;
 		}
@@ -72,7 +66,7 @@ namespace BT_Actions
 	inline BehaviorState ChangeToArrive(Blackboard* pBlackboard)
 	{
 		ISteeringBehavior* pSteering{ nullptr };
-		Arrive* pArrive{ nullptr };
+		SteeringBehaviors* pBehaviors{ nullptr };
 		IExamInterface* pInterface{};
 		Vector2 target;
 		if (!pBlackboard->GetData("SteeringBehavior", pSteering) || pSteering == nullptr)
@@ -80,7 +74,7 @@ namespace BT_Actions
 			return BehaviorState::Failure;
 		}
 
-		if (!pBlackboard->GetData("Arrive", pArrive) || pArrive == nullptr)
+		if (!pBlackboard->GetData("Behaviors", pBehaviors) || pBehaviors == nullptr)
 		{
 			return BehaviorState::Failure;
 		}
@@ -97,19 +91,21 @@ namespace BT_Actions
 
 		auto agentInfo = pInterface->Agent_GetInfo();
 
-		pArrive->SetSlowRadius(agentInfo.GrabRange * 2.f);
-		pArrive->SetTargetRadius(agentInfo.GrabRange);
-		pArrive->SetTarget(target);
+		pBehaviors->pArrive->SetSlowRadius(agentInfo.GrabRange * 2.f);
+		pBehaviors->pArrive->SetTargetRadius(agentInfo.GrabRange);
+		pBehaviors->pArrive->SetTarget(target);
 
-		pSteering = pArrive;
+		pSteering = pBehaviors->pArrive;
 
-		if (!pBlackboard->ChangeData("SteeringBehavior", pSteering))
+		if (!pBlackboard->ChangeData("SelectedBehavior", pSteering))
 		{
 			return BehaviorState::Failure;
 		}
 
 		return BehaviorState::Success;
 	}
+
+	//Needs to be changed
 
 	inline BehaviorState ChangeToEvade(Blackboard* pBlackboard)
 	{
