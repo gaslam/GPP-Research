@@ -26,6 +26,7 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	m_pWander = new Wander{};
 	m_pSeek = new Seek{};
 	m_pArrive = new Arrive{};
+	m_pEvade = new Evade{};
 
 	m_pWanderAndSeek = new BlendedSteering{ {{m_pWander,0.6f},{m_pSeek,1.f}} };
 	m_pSteeringBehavior = m_pWanderAndSeek;
@@ -37,17 +38,29 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	m_pBlackboard->AddData("Wander", m_pWander);
 	m_pBlackboard->AddData("Seek", m_pSeek);
 	m_pBlackboard->AddData("Target", m_Target);
+	m_pBlackboard->AddData("AgentFleeTarget", Elite::Vector2());
+	m_pBlackboard->AddData("Evade", m_pEvade);
 	m_pBlackboard->AddData("Arrive", m_pArrive);
 
-	BehaviorSequence* pPursueSmallerEnemy{
+	BehaviorSequence* pMoveToTarget{
 		new BehaviorSequence({
 			new BehaviorAction(BT_Actions::ChangeToSeekAndWander),
 		new BehaviorConditional(BT_Conditions::IsTargetInRadius),
-		new BehaviorAction(BT_Actions::ChangeToArrive),
+		new BehaviorAction(BT_Actions::ChangeToArrive)
 	}) };
 
+	BehaviorSequence* pEvadeEnemy{ new BehaviorSequence({
+			new BehaviorConditional(BT_Conditions::IsEnemyInFov),
+			new BehaviorAction(BT_Actions::ChangeToEvade)
+		}) };
+
 	m_pDecisionMaking = new Elite::BehaviorTree{ m_pBlackboard,
-		pPursueSmallerEnemy
+		new BehaviorSelector(
+			{
+				pEvadeEnemy,
+				pMoveToTarget
+			}
+		)
 	};
 }
 
@@ -279,6 +292,7 @@ vector<HouseInfo> Plugin::GetHousesInFOV() const
 vector<EntityInfo> Plugin::GetEntitiesInFOV() const
 {
 	vector<EntityInfo> vEntitiesInFOV = {};
+	vector<EnemyInfo> vEnemiesInFOV = {};
 
 	EntityInfo ei = {};
 	for (int i = 0;; ++i)
@@ -286,11 +300,11 @@ vector<EntityInfo> Plugin::GetEntitiesInFOV() const
 		if (m_pInterface->Fov_GetEntityByIndex(i, ei))
 		{
 			vEntitiesInFOV.push_back(ei);
+			EnemyInfo info = {};
 			continue;
 		}
 
 		break;
 	}
-
 	return vEntitiesInFOV;
 }

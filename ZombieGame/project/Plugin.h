@@ -34,6 +34,7 @@ private:
 	Wander* m_pWander = nullptr;
 	Seek* m_pSeek = nullptr;
 	Arrive* m_pArrive = nullptr;
+	Evade* m_pEvade = nullptr;
 	Elite::IDecisionMaking* m_pDecisionMaking{ nullptr };
 
 	ISteeringBehavior* m_pSteeringBehavior{};

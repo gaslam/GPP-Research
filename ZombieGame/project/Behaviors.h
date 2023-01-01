@@ -110,6 +110,45 @@ namespace BT_Actions
 
 		return BehaviorState::Success;
 	}
+
+	inline BehaviorState ChangeToEvade(Blackboard* pBlackboard)
+	{
+		ISteeringBehavior* pSteering{ nullptr };
+		Evade* pEvade{ nullptr };
+		IExamInterface* pInterface{};
+		Vector2 target;
+
+		if (!pBlackboard->GetData("SteeringBehavior", pSteering) || pSteering == nullptr)
+		{
+			return BehaviorState::Failure;
+		}
+
+		if (!pBlackboard->GetData("Evade", pEvade) || pEvade == nullptr)
+		{
+			return BehaviorState::Failure;
+		}
+
+		if (!pBlackboard->GetData("Interface", pInterface) || pInterface == nullptr)
+		{
+			return BehaviorState::Failure;
+		}
+
+		if (!pBlackboard->GetData("AgentFleeTarget", target))
+		{
+			return BehaviorState::Failure;
+		}
+
+		pEvade->SetTarget(target);
+		pEvade->SetRadius(30.f);
+		pSteering = pEvade;
+
+		if (!pBlackboard->ChangeData("SteeringBehavior", pSteering))
+		{
+			return BehaviorState::Failure;
+		}
+
+		return BehaviorState::Success;
+	}
 }
 
 namespace BT_Conditions
@@ -140,6 +179,55 @@ namespace BT_Conditions
 			return true;
 		}
 		return false;
+	}
+
+	inline bool IsEnemyInFov(Blackboard* pBlackboard)
+	{
+		std::vector<EntityInfo> enemiesInFov{};
+		IExamInterface* pInterface{};
+
+		if (!pBlackboard->GetData("Interface", pInterface) || pInterface == nullptr)
+		{
+			return false;
+		}
+
+
+		EntityInfo ei = {};
+		for (int i = 0;; ++i)
+		{
+			if (pInterface->Fov_GetEntityByIndex(i, ei))
+			{
+				if (ei.Type == eEntityType::ENEMY)
+				{
+					enemiesInFov.push_back(ei);
+				}
+				continue;
+			}
+			break;
+		}
+
+		if (enemiesInFov.size() == 0)
+		{
+			return false;
+		}
+
+		EntityInfo closestEnemy{enemiesInFov[0]};
+		auto agentInfo = pInterface->Agent_GetInfo();
+		float closestDistance{ agentInfo.Position.DistanceSquared(closestEnemy.Location) };
+		for (auto& enemy : enemiesInFov)
+		{
+			if (agentInfo.Position.DistanceSquared(enemy.Location) < closestDistance)
+			{
+				closestEnemy = enemy;
+				closestDistance = agentInfo.Position.DistanceSquared(closestEnemy.Location);
+			}
+		}
+
+		if (!pBlackboard->ChangeData("AgentFleeTarget", closestEnemy.Location))
+		{
+			return false;
+		}
+		return true;
 	}
 }
 
