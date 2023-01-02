@@ -7,8 +7,7 @@
 class IBaseInterface;
 class IExamInterface;
 class ISteeringBehavior;
-class BlendedSteering;
-
+class InventoryManager;
 class Plugin :public IExamPlugin
 {
 public:
@@ -31,19 +30,16 @@ private:
 	Elite::Blackboard* m_pBlackboard = nullptr;
 	IExamInterface* m_pInterface = nullptr;
 
-	SteeringBehaviors* m_pBehaviors{};
+	SteeringBehaviors* m_pBehaviors{new SteeringBehaviors()};
+	InventoryManager* m_pInventoryManager{nullptr};
 
 	std::vector<HouseInfo> GetHousesInFOV() const;
 	std::vector<EntityInfo> GetEntitiesInFOV() const;
 
 	Elite::Vector2 m_Target = {};
 	bool m_CanRun = false; //Demo purpose
-	bool m_GrabItem = false; //Demo purpose
-	bool m_UseItem = false; //Demo purpose
-	bool m_RemoveItem = false; //Demo purpose
 	float m_AngSpeed = 0.f; //Demo purpose
 
-	UINT m_InventorySlot = 0;
 };
 
 //ENTRY

@@ -6,6 +6,7 @@
 #include "EBehaviorTree.h"
 #include "Behaviors.h"
 #include "CombinedSteeringBehaviors.h"
+#include "InventoryManager.h"
 
 using namespace std;
 
@@ -23,6 +24,8 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	info.Student_LastName = "Lammertyn";
 	info.Student_Class = "2DAE08";
 
+	m_pInventoryManager = new InventoryManager();
+
 	m_pBehaviors->pWander = new Wander{};
 	m_pBehaviors->pSeek = new Seek{};
 	m_pBehaviors->pArrive = new Arrive{};
@@ -30,11 +33,14 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 
 	m_pBehaviors->pWanderAndSeek = new BlendedSteering{ {{m_pBehaviors->pWander,0.6f},{m_pBehaviors->pSeek,1.f}} };
 
+	m_pBehaviors->pSelectedSteering = m_pBehaviors->pWanderAndSeek;
+
 	m_pBlackboard = new Elite::Blackboard{};
 	m_pBlackboard->AddData("Interface", m_pInterface);
 	m_pBlackboard->AddData("Behaviors", m_pBehaviors);
-	m_pBlackboard->AddData("SelectedBehavior", m_pBehaviors->pWanderAndSeek);
+	m_pBlackboard->AddData("SelectedBehavior", m_pBehaviors->pSelectedSteering);
 	m_pBlackboard->AddData("AgentFleeTarget", Elite::Vector2());
+	m_pBlackboard->AddData("Target", m_Target);
 
 	BehaviorSequence* pMoveToTarget{
 		new BehaviorSequence({
@@ -128,18 +134,6 @@ void Plugin::Update(float dt)
 	{
 		m_AngSpeed += Elite::ToRadians(10);
 	}
-	else if (m_pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_G))
-	{
-		m_GrabItem = true;
-	}
-	else if (m_pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_U))
-	{
-		m_UseItem = true;
-	}
-	else if (m_pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_R))
-	{
-		m_RemoveItem = true;
-	}
 	else if (m_pInterface->Input_IsKeyboardKeyUp(Elite::eScancode_Space))
 	{
 		m_CanRun = false;
@@ -148,22 +142,8 @@ void Plugin::Update(float dt)
 	{
 		m_pInterface->RequestShutdown();
 	}
-	else if (m_pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_KP_Minus))
-	{
-		if (m_InventorySlot > 0)
-			--m_InventorySlot;
-	}
-	else if (m_pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_KP_Plus))
-	{
-		if (m_InventorySlot < 4)
-			++m_InventorySlot;
-	}
-	else if (m_pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_Q))
-	{
-		ItemInfo info = {};
-		m_pInterface->Inventory_GetItem(m_InventorySlot, info);
-		std::cout << (int)info.Type << std::endl;
-	}
+
+	m_pInventoryManager->Update(m_pInterface);
 }
 
 //Update
@@ -204,8 +184,8 @@ SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 
 	//INVENTORY USAGE DEMO
 	//********************
-
-	if (m_GrabItem)
+	const UINT inventorySlot{ m_pInventoryManager->GetInventorySlot() };
+	if (m_pInventoryManager->CanGrabItem())
 	{
 		ItemInfo item;
 		//Item_Grab > When DebugParams.AutoGrabClosestItem is TRUE, the Item_Grab function returns the closest item in range
@@ -217,20 +197,20 @@ SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 		{
 			//Once grabbed, you can add it to a specific inventory slot
 			//Slot must be empty
-			m_pInterface->Inventory_AddItem(m_InventorySlot, item);
+			m_pInterface->Inventory_AddItem(inventorySlot, item);
 		}
 	}
 
-	if (m_UseItem)
+	if (m_pInventoryManager->CanUseItem())
 	{
 		//Use an item (make sure there is an item at the given inventory slot)
-		m_pInterface->Inventory_UseItem(m_InventorySlot);
+		m_pInterface->Inventory_UseItem(inventorySlot);
 	}
 
-	if (m_RemoveItem)
+	if (m_pInventoryManager->CanRemoveItem())
 	{
 		//Remove an item from a inventory slot
-		m_pInterface->Inventory_RemoveItem(m_InventorySlot);
+		m_pInterface->Inventory_RemoveItem(inventorySlot);
 	}
 
 	//Simple Seek Behaviour (towards Target)
@@ -249,11 +229,9 @@ SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 	steering.RunMode = m_CanRun; //If RunMode is True > MaxLinSpd is increased for a limited time (till your stamina runs out)
 
 	//SteeringPlugin_Output is works the exact same way a SteeringBehaviour output
-
-//@End (Demo Purposes)
-	m_GrabItem = false; //Reset State
-	m_UseItem = false;
-	m_RemoveItem = false;
+	m_pInventoryManager->SetGrabItem(false);
+	m_pInventoryManager->SetRemoveItem(false);
+	m_pInventoryManager->SetUseItem(false);
 
 	return steering;
 }
