@@ -6,6 +6,7 @@
     <ClCompile Include="EBehaviorTree.cpp" />
     <ClCompile Include="CombinedSteeringBehaviors.cpp" />
     <ClCompile Include="SteeringBehaviors.cpp" />
+    <ClCompile Include="InventoryManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Plugin.h" />
@@ -19,5 +20,6 @@
     <ClInclude Include="CombinedSteeringBehaviors.h" />
     <ClInclude Include="SteeringBehaviors.h" />
     <ClInclude Include="SteeringHelpers.h" />
+    <ClInclude Include="InventoryManager.h" />
   </ItemGroup>
 </Project>
