@@ -1,5 +1,6 @@
 #pragma once
 #include "../inc/Exam_HelperStructs.h"
+#include "EDecisionMaking.h"
 
 //SteeringParams (alias TargetData)
 struct SteeringParams //Also used as Target for SteeringBehaviors
@@ -107,6 +108,12 @@ struct Goal
 	}
 };
 
+class BlendedSteering;
+class Wander;
+class Seek;
+class Arrive;
+class Evade;
+class ISteeringBehavior;
 struct SteeringBehaviors
 {
 	BlendedSteering* pWanderAndSeek = nullptr;
@@ -114,6 +121,7 @@ struct SteeringBehaviors
 	Seek* pSeek = nullptr;
 	Arrive* pArrive = nullptr;
 	Evade* pEvade = nullptr;
+	ISteeringBehavior* pSelectedSteering{ nullptr };
 	Elite::IDecisionMaking* pDecisionMaking{ nullptr };
 };
 
