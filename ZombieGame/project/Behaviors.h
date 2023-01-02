@@ -69,7 +69,7 @@ namespace BT_Actions
 		SteeringBehaviors* pBehaviors{ nullptr };
 		IExamInterface* pInterface{};
 		Vector2 target;
-		if (!pBlackboard->GetData("SteeringBehavior", pSteering) || pSteering == nullptr)
+		if (!pBlackboard->GetData("SelectedBehavior", pSteering) || pSteering == nullptr)
 		{
 			return BehaviorState::Failure;
 		}
@@ -110,21 +110,15 @@ namespace BT_Actions
 	inline BehaviorState ChangeToEvade(Blackboard* pBlackboard)
 	{
 		ISteeringBehavior* pSteering{ nullptr };
-		Evade* pEvade{ nullptr };
-		IExamInterface* pInterface{};
+		SteeringBehaviors* pBehaviors{ nullptr };
 		Vector2 target;
 
-		if (!pBlackboard->GetData("SteeringBehavior", pSteering) || pSteering == nullptr)
+		if (!pBlackboard->GetData("SelectedBehavior", pSteering) || pSteering == nullptr)
 		{
 			return BehaviorState::Failure;
 		}
 
-		if (!pBlackboard->GetData("Evade", pEvade) || pEvade == nullptr)
-		{
-			return BehaviorState::Failure;
-		}
-
-		if (!pBlackboard->GetData("Interface", pInterface) || pInterface == nullptr)
+		if (!pBlackboard->GetData("Behaviors", pBehaviors) || pBehaviors == nullptr)
 		{
 			return BehaviorState::Failure;
 		}
@@ -134,11 +128,11 @@ namespace BT_Actions
 			return BehaviorState::Failure;
 		}
 
-		pEvade->SetTarget(target);
-		pEvade->SetRadius(30.f);
-		pSteering = pEvade;
+		pBehaviors->pEvade->SetTarget(target);
+		pBehaviors->pEvade->SetRadius(30.f);
+		pSteering = pBehaviors->pEvade;
 
-		if (!pBlackboard->ChangeData("SteeringBehavior", pSteering))
+		if (!pBlackboard->ChangeData("SelectedBehavior", pSteering))
 		{
 			return BehaviorState::Failure;
 		}
