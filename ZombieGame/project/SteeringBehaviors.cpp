@@ -76,7 +76,6 @@ SteeringPlugin_Output_Extended Arrive::CalculateSteering(float deltaT, AgentInfo
 	{
 		steering.LinearVelocity.Normalize();
 		steering.LinearVelocity *= m_SlowSpeed;
-		steering.AngularVelocity = 0.f;
 		return steering;
 	}
 
@@ -94,14 +93,15 @@ SteeringPlugin_Output_Extended Arrive::CalculateSteering(float deltaT, AgentInfo
 SteeringPlugin_Output_Extended Face::CalculateSteering(float deltaT, AgentInfo& pAgent)
 {
 	SteeringPlugin_Output_Extended steering{};
-	const float rotation{ pAgent.Orientation };
+	const float rotation{ pAgent.Orientation};
 	const Elite::Vector2 agentPos{ pAgent.Position };
 	const Elite::Vector2 directionAgent{ cosf(rotation), sinf(rotation) };
 	const Elite::Vector2 directionTarget{ agentPos - m_Target.Position };
 
 
-	steering.AutoOrient = true;
-	steering.AngularVelocity = Elite::ToRadians(Elite::AngleBetween(directionTarget, directionAgent)) * pAgent.MaxAngularSpeed;
+	steering.AutoOrient = false;
+	steering.AngularVelocity = Elite::AngleBetween(directionTarget, directionAgent);
+	steering.IsValid = true;
 
 	return steering;
 }
