@@ -30,16 +30,20 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	m_pBehaviors->pSeek = new Seek{};
 	m_pBehaviors->pArrive = new Arrive{};
 	m_pBehaviors->pEvade = new Evade{};
+	m_pBehaviors->pFace = new Face{};
 
 	m_pBehaviors->pWanderAndSeek = new BlendedSteering{ {{m_pBehaviors->pWander,0.6f},{m_pBehaviors->pSeek,1.f}} };
+	m_pBehaviors->pArriveAndFace = new BlendedSteering{ {{m_pBehaviors->pArrive, 1.f},{m_pBehaviors->pFace, 0.5f}} };
+	m_pBehaviors->pEvadeAndFace = new PrioritySteering{ {m_pBehaviors->pEvade, m_pBehaviors->pFace} };
 
-	m_pBehaviors->pSelectedSteering = m_pBehaviors->pWanderAndSeek;
+	m_pBehaviors->pSelectedSteering = m_pBehaviors->pFace;
 
 	m_pBlackboard = new Elite::Blackboard{};
 	m_pBlackboard->AddData("Interface", m_pInterface);
 	m_pBlackboard->AddData("Behaviors", m_pBehaviors);
 	m_pBlackboard->AddData("SelectedBehavior", m_pBehaviors->pSelectedSteering);
 	m_pBlackboard->AddData("AgentFleeTarget", Elite::Vector2());
+	m_pBlackboard->AddData("InventoryManager", m_pInventoryManager);
 	m_pBlackboard->AddData("Target", m_Target);
 
 	BehaviorSequence* pMoveToTarget{
@@ -54,10 +58,19 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 			new BehaviorAction(BT_Actions::ChangeToEvade)
 		}) };
 
+	BehaviorSequence* pEvadeAndShootEnemy{ new BehaviorSequence({
+		new BehaviorConditional(BT_Conditions::IsEnemyInFov),
+		new BehaviorConditional(BT_Conditions::DoesPlayerHaveUsableWeapon),
+		new BehaviorAction(BT_Actions::ChangeToEvadeAndShoot)
+	}) };
+
 	m_pBehaviors->pDecisionMaking = new Elite::BehaviorTree{ m_pBlackboard,
 		new BehaviorSelector(
 			{
-				pEvadeEnemy,
+				new BehaviorSelector({
+				pEvadeAndShootEnemy,
+				pEvadeEnemy
+}),
 				pMoveToTarget
 			}
 		)
@@ -97,7 +110,7 @@ void Plugin::InitGameDebugParams(GameDebugParams& params)
 	params.EnemyCount = 20; //How many enemies? (Default = 20)
 	params.GodMode = false; //GodMode > You can't die, can be useful to inspect certain behaviors (Default = false)
 	params.LevelFile = "GameLevel.gppl";
-	params.AutoGrabClosestItem = true; //A call to Item_Grab(...) returns the closest item that can be grabbed. (EntityInfo argument is ignored)
+	params.AutoGrabClosestItem = false; //A call to Item_Grab(...) returns the closest item that can be grabbed. (EntityInfo argument is ignored)
 	params.StartingDifficultyStage = 1;
 	params.InfiniteStamina = false;
 	params.SpawnDebugPistol = true;
@@ -152,7 +165,7 @@ SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 {
 
 	//Use the Interface (IAssignmentInterface) to 'interface' with the AI_Framework
-	auto agentInfo = m_pInterface->Agent_GetInfo();
+	AgentInfo agentInfo = m_pInterface->Agent_GetInfo();
 	m_pBehaviors->pDecisionMaking->Update(dt);
 
 	auto nextTargetPos = m_pInterface->NavMesh_GetClosestPathPoint(m_Target);
@@ -182,9 +195,6 @@ SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 		}
 	}
 
-	//INVENTORY USAGE DEMO
-	//********************
-	const UINT inventorySlot{ m_pInventoryManager->GetInventorySlot() };
 	if (m_pInventoryManager->CanGrabItem())
 	{
 		ItemInfo item;
@@ -192,39 +202,19 @@ SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 		//Keep in mind that DebugParams are only used for debugging purposes, by default this flag is FALSE
 		//Otherwise, use GetEntitiesInFOV() to retrieve a vector of all entities in the FOV (EntityInfo)
 		//Item_Grab gives you the ItemInfo back, based on the passed EntityHash (retrieved by GetEntitiesInFOV)
-		GetEntitiesInFOV();
-		if (m_pInterface->Item_Grab({}, item))
+		auto entities = GetEntitiesInFOV();
+		for (size_t i{}; i < entities.size(); ++i)
 		{
-			//Once grabbed, you can add it to a specific inventory slot
-			//Slot must be empty
-			m_pInterface->Inventory_AddItem(inventorySlot, item);
+			if ((agentInfo.Position - entities[i].Location).MagnitudeSquared() < agentInfo.GrabRange * agentInfo.GrabRange)
+			{
+				m_pInventoryManager->GrabItem(m_pInterface,entities[i],item);
+			}
 		}
 	}
-
-	if (m_pInventoryManager->CanUseItem())
-	{
-		//Use an item (make sure there is an item at the given inventory slot)
-		m_pInterface->Inventory_UseItem(inventorySlot);
-	}
-
-	if (m_pInventoryManager->CanRemoveItem())
-	{
-		//Remove an item from a inventory slot
-		m_pInterface->Inventory_RemoveItem(inventorySlot);
-	}
-
-	//Simple Seek Behaviour (towards Target)
-	//steering.LinearVelocity = nextTargetPos - agentInfo.Position; //Desired Velocity
-	//steering.LinearVelocity.Normalize(); //Normalize Desired Velocity
-	//steering.LinearVelocity *= agentInfo.MaxLinearSpeed; //Rescale to Max Speed
-
-	//if (Distance(nextTargetPos, agentInfo.Position) < 2.f)
-	//{
-	//	steering.LinearVelocity = Elite::ZeroVector2;
-	//}
+	m_pInventoryManager->UseItem(m_pInterface);
+	m_pInventoryManager->RemoveItem(m_pInterface);
 
 	//steering.AngularVelocity = m_AngSpeed; //Rotate your character to inspect the world while walking
-	steering.AutoOrient = true; //Setting AutoOrient to TRue overrides the AngularVelocity
 
 	steering.RunMode = m_CanRun; //If RunMode is True > MaxLinSpd is increased for a limited time (till your stamina runs out)
 
@@ -232,6 +222,11 @@ SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 	m_pInventoryManager->SetGrabItem(false);
 	m_pInventoryManager->SetRemoveItem(false);
 	m_pInventoryManager->SetUseItem(false);
+
+	if (!m_pBlackboard->ChangeData("InventoryManager", m_pInventoryManager))
+	{
+		std::cout << "Cannot update Inventory.\n";
+	}
 
 	return steering;
 }
@@ -265,7 +260,6 @@ vector<HouseInfo> Plugin::GetHousesInFOV() const
 vector<EntityInfo> Plugin::GetEntitiesInFOV() const
 {
 	vector<EntityInfo> vEntitiesInFOV = {};
-	vector<EnemyInfo> vEnemiesInFOV = {};
 
 	EntityInfo ei = {};
 	for (int i = 0;; ++i)
@@ -273,7 +267,6 @@ vector<EntityInfo> Plugin::GetEntitiesInFOV() const
 		if (m_pInterface->Fov_GetEntityByIndex(i, ei))
 		{
 			vEntitiesInFOV.push_back(ei);
-			EnemyInfo info = {};
 			continue;
 		}
 

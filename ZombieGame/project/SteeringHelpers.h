@@ -109,20 +109,26 @@ struct Goal
 };
 
 class BlendedSteering;
+class PrioritySteering;
 class Wander;
 class Seek;
 class Arrive;
 class Evade;
+class Face;
 class ISteeringBehavior;
 struct SteeringBehaviors
 {
+	PrioritySteering* pEvadeAndFace = nullptr;
+	BlendedSteering* pArriveAndFace = nullptr;
 	BlendedSteering* pWanderAndSeek = nullptr;
 	Wander* pWander = nullptr;
 	Seek* pSeek = nullptr;
 	Arrive* pArrive = nullptr;
 	Evade* pEvade = nullptr;
+	Face* pFace = nullptr;
 	ISteeringBehavior* pSelectedSteering{ nullptr };
 	Elite::IDecisionMaking* pDecisionMaking{ nullptr };
+
 };
 
 struct SteeringPlugin_Output_Extended : SteeringPlugin_Output
