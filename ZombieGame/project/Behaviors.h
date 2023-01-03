@@ -14,6 +14,7 @@
 #include <Exam_HelperStructs.h>
 #include "SteeringBehaviors.h"
 #include "CombinedSteeringBehaviors.h"
+#include "InventoryManager.h"
 
 using namespace Elite;
 
@@ -91,11 +92,12 @@ namespace BT_Actions
 
 		auto agentInfo = pInterface->Agent_GetInfo();
 
-		pBehaviors->pArrive->SetSlowRadius(agentInfo.GrabRange * 2.f);
-		pBehaviors->pArrive->SetTargetRadius(agentInfo.GrabRange);
+		pBehaviors->pArrive->SetSlowRadius(agentInfo.GrabRange / 2.f);
+		pBehaviors->pArrive->SetTargetRadius(agentInfo.GrabRange / 4.f);
 		pBehaviors->pArrive->SetTarget(target);
+		pBehaviors->pFace->SetTarget(target);
 
-		pSteering = pBehaviors->pArrive;
+		pSteering = pBehaviors->pFace;
 
 		if (!pBlackboard->ChangeData("SelectedBehavior", pSteering))
 		{
@@ -139,6 +141,46 @@ namespace BT_Actions
 
 		return BehaviorState::Success;
 	}
+
+	//Shoot = Face the enemy to allow the player to shoot
+	inline BehaviorState ChangeToEvadeAndShoot(Blackboard* pBlackboard)
+	{
+		ISteeringBehavior* pSteering{ nullptr };
+		SteeringBehaviors* pBehaviors{ nullptr };
+		Vector2 target;
+
+		if (!pBlackboard->GetData("SelectedBehavior", pSteering) || pSteering == nullptr)
+		{
+			return BehaviorState::Failure;
+		}
+
+		if (!pBlackboard->GetData("Behaviors", pBehaviors) || pBehaviors == nullptr)
+		{
+			return BehaviorState::Failure;
+		}
+
+		if (!pBlackboard->GetData("AgentFleeTarget", target))
+		{
+			return BehaviorState::Failure;
+		}
+
+		if (pBehaviors->pEvade == nullptr || pBehaviors->pFace == nullptr || pBehaviors->pEvadeAndFace == nullptr)
+		{
+			return BehaviorState::Failure;
+		}
+
+		pBehaviors->pEvade->SetTarget(target);
+		pBehaviors->pEvade->SetRadius(15.f);
+		pBehaviors->pFace->SetTarget(target);
+		pSteering = pBehaviors->pEvadeAndFace;
+
+		if (!pBlackboard->ChangeData("SelectedBehavior", pSteering))
+		{
+			return BehaviorState::Failure;
+		}
+
+		return BehaviorState::Success;
+	}
 }
 
 namespace BT_Conditions
@@ -169,6 +211,49 @@ namespace BT_Conditions
 			return true;
 		}
 		return false;
+	}
+
+	inline bool DoesPlayerHaveUsableWeapon(Blackboard* pBlackboard)
+	{
+		IExamInterface* pInterface{};
+		InventoryManager* pManager{};
+		Vector2 target{};
+
+		if (!pBlackboard->GetData("Interface", pInterface) || pInterface == nullptr)
+		{
+			return false;
+		}
+
+		if (!pBlackboard->GetData("InventoryManager", pManager) || pManager == nullptr)
+		{
+			return false;
+		}
+
+		if (!pManager->PlayerUsesWeapon())
+		{
+			return false;
+		}
+
+		ItemInfo info = {};
+
+		auto test = pManager->ReturnPlayerSelectedItemInfo(pInterface);
+
+		if (info.Type != eItemType::SHOTGUN && info.Type != eItemType::PISTOL)
+		{
+			return false;
+		}
+
+
+
+		const int ammo = pInterface->Weapon_GetAmmo(test);
+
+		if (ammo <= 0)
+		{
+			return false;
+		}
+
+		return true;
+
 	}
 
 	inline bool IsEnemyInFov(Blackboard* pBlackboard)
