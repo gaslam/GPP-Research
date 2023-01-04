@@ -115,6 +115,7 @@ class Seek;
 class Arrive;
 class Evade;
 class Face;
+class Flee;
 class ISteeringBehavior;
 struct SteeringBehaviors
 {
@@ -126,6 +127,7 @@ struct SteeringBehaviors
 	Arrive* pArrive = nullptr;
 	Evade* pEvade = nullptr;
 	Face* pFace = nullptr;
+	Flee* pFlee = nullptr;
 	ISteeringBehavior* pSelectedSteering{ nullptr };
 	Elite::IDecisionMaking* pDecisionMaking{ nullptr };
 

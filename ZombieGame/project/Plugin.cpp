@@ -31,6 +31,7 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	m_pBehaviors->pArrive = new Arrive{};
 	m_pBehaviors->pEvade = new Evade{};
 	m_pBehaviors->pFace = new Face{};
+	m_pBehaviors->pFlee = new Flee{};
 
 	m_pBehaviors->pWanderAndSeek = new BlendedSteering{ {{m_pBehaviors->pWander,0.6f},{m_pBehaviors->pSeek,1.f}} };
 	m_pBehaviors->pArriveAndFace = new BlendedSteering{ {{m_pBehaviors->pArrive, 1.f},{m_pBehaviors->pFace, 0.5f}} };
@@ -58,6 +59,12 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 			new BehaviorAction(BT_Actions::ChangeToEvade)
 		}) };
 
+	BehaviorSequence* pFleeEnemyIfBitten{ new BehaviorSequence({
+		new BehaviorConditional(BT_Conditions::IsPlayerBitten),
+		new BehaviorAction(BT_Actions::ChangeToFlee)
+		})
+	};
+
 	BehaviorSequence* pEvadeAndShootEnemy{ new BehaviorSequence({
 		new BehaviorConditional(BT_Conditions::IsEnemyInFov),
 		new BehaviorConditional(BT_Conditions::DoesPlayerHaveUsableWeapon),
@@ -68,9 +75,10 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 		new BehaviorSelector(
 			{
 				new BehaviorSelector({
-				pEvadeAndShootEnemy,
-				pEvadeEnemy
-}),
+					pFleeEnemyIfBitten,
+					pEvadeAndShootEnemy,
+					pEvadeEnemy
+				}),
 				pMoveToTarget
 			}
 		)
@@ -207,7 +215,7 @@ SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 		{
 			if ((agentInfo.Position - entities[i].Location).MagnitudeSquared() < agentInfo.GrabRange * agentInfo.GrabRange)
 			{
-				m_pInventoryManager->GrabItem(m_pInterface,entities[i],item);
+				m_pInventoryManager->GrabItem(m_pInterface, entities[i], item);
 			}
 		}
 	}

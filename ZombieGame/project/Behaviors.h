@@ -170,9 +170,46 @@ namespace BT_Actions
 		}
 
 		pBehaviors->pEvade->SetTarget(target);
-		pBehaviors->pEvade->SetRadius(15.f);
+		pBehaviors->pEvade->SetRadius(7.5f);
 		pBehaviors->pFace->SetTarget(target);
 		pSteering = pBehaviors->pEvadeAndFace;
+
+		if (!pBlackboard->ChangeData("SelectedBehavior", pSteering))
+		{
+			return BehaviorState::Failure;
+		}
+
+		return BehaviorState::Success;
+	}
+
+	inline BehaviorState ChangeToFlee(Blackboard* pBlackboard)
+	{
+		ISteeringBehavior* pSteering{ nullptr };
+		SteeringBehaviors* pBehaviors{ nullptr };
+		Vector2 target;
+
+		if (!pBlackboard->GetData("SelectedBehavior", pSteering) || pSteering == nullptr)
+		{
+			return BehaviorState::Failure;
+		}
+
+		if (!pBlackboard->GetData("Behaviors", pBehaviors) || pBehaviors == nullptr)
+		{
+			return BehaviorState::Failure;
+		}
+
+		if (!pBlackboard->GetData("AgentFleeTarget", target))
+		{
+			return BehaviorState::Failure;
+		}
+
+		if (pBehaviors->pFlee == nullptr)
+		{
+			return BehaviorState::Failure;
+		}
+
+		pBehaviors->pFlee->SetTarget(target);
+		pSteering = pBehaviors->pFlee;
 
 		if (!pBlackboard->ChangeData("SelectedBehavior", pSteering))
 		{
@@ -286,7 +323,7 @@ namespace BT_Conditions
 			return false;
 		}
 
-		EntityInfo closestEnemy{enemiesInFov[0]};
+		EntityInfo closestEnemy{ enemiesInFov[0] };
 		auto agentInfo = pInterface->Agent_GetInfo();
 		float closestDistance{ agentInfo.Position.DistanceSquared(closestEnemy.Location) };
 		for (auto& enemy : enemiesInFov)
@@ -303,6 +340,27 @@ namespace BT_Conditions
 			return false;
 		}
 		return true;
+	}
+
+	inline bool IsPlayerBitten(Blackboard* pBlackboard)
+	{
+		IExamInterface* pInterface{ nullptr };
+		Vector2 target{};
+
+		if (!pBlackboard->GetData("Interface", pInterface) || pInterface == nullptr)
+		{
+			return false;
+		}
+
+		auto agentInfo = pInterface->Agent_GetInfo();
+		target = agentInfo.Position;
+
+		if (!agentInfo.Bitten)
+		{
+			return false;
+		}
+
+		return IsEnemyInFov(pBlackboard);
 	}
 }
 
