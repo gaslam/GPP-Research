@@ -5,27 +5,36 @@
 
 using namespace std;
 
-
-void InventoryManager::GrabItem(IExamInterface* pInterface, EntityInfo& entity, ItemInfo& item)
+bool InventoryManager::GrabItem(IExamInterface* pInterface, EntityInfo& entity, ItemInfo& item)
 {
-			//Once grabbed, you can add it to a specific inventory slot
-			//Slot must be empty
-			if (pInterface->Item_Grab(entity, item))
+	if (m_IsFull || !pInterface->Item_Grab(entity, item))
+	{
+		return false;
+	}
+
+	for (int i{}; i < m_TotalSlots; ++i)
+	{
+		bool itemAdded{ false };
+		if (pInterface->Inventory_AddItem(i, item))
+		{
+			m_GrabItem = false;
+			itemAdded = true;
+		}
+		if ((item.Type == eItemType::PISTOL || item.Type == eItemType::SHOTGUN) && itemAdded)
+		{
+			m_CanUseWeapon = true;
+			m_WeaponSlots.push_back(i);
+		}
+		if (itemAdded)
+		{
+			if (i == m_TotalSlots - 1)
 			{
-				if (item.Type == eItemType::PISTOL || item.Type == eItemType::SHOTGUN)
-				{
-					m_CanUseWeapon = true;
-					m_WeaponSlots.push_back(m_InventorySlot);
-				}
-				pInterface->Inventory_AddItem(m_InventorySlot, item);
+				m_IsFull = true;
 			}
-}
-
-ItemInfo InventoryManager::ReturnPlayerSelectedItemInfo(IExamInterface* pInterface)
-{
-	ItemInfo info{};
-	pInterface->Inventory_GetItem(m_InventorySlot, info);
-	return info;
+			return true;
+		}
+	}
+	return false;
 }
 
 void InventoryManager::UseItem(IExamInterface* pInterface)
@@ -46,37 +55,48 @@ void InventoryManager::RemoveItem(IExamInterface* pInterface)
 		std::remove_if(m_WeaponSlots.begin(), m_WeaponSlots.end(), [&](int slot) {
 			return slot == m_InventorySlot;
 			});
+
+		m_IsFull = false;
 	}
 }
 
+bool InventoryManager::GetItemInfo(IExamInterface* pInterface, EntityInfo& entity, ItemInfo& item)
+{
+	if (pInterface->Item_GetInfo(entity, item))
+	{
+		return true;
+	}
+	return false;
+}
 
-	//	if (m_InventorySlot > 0)
-	//	{
-	//		m_CanUseWeapon = false;
-	//		--m_InventorySlot;
-	//		for (int slot : m_WeaponSlots)
-	//		{
-	//			if (slot == m_InventorySlot)
-	//			{
-	//				m_CanUseWeapon = true;
-	//			}
-	//		}
-	//		std::cout << "Current selected slot: SLOT(" << m_InventorySlot << ")\n";
-	//	}
-	//}
-	//else if (pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_KP_Plus))
-	//{
-	//	if (m_InventorySlot < m_TotalSlots)
-	//	{
-	//		m_CanUseWeapon = false;
-	//		++m_InventorySlot;
-	//		for (int slot : m_WeaponSlots)
-	//		{
-	//			if (slot == m_InventorySlot)
-	//			{
-	//				m_CanUseWeapon = true;
-	//			}
-	//		}
-	//		std::cout << "Current selected slot: SLOT(" << m_InventorySlot << ")\n";
-	//	}
-	//}
+
+//	if (m_InventorySlot > 0)
+//	{
+//		m_CanUseWeapon = false;
+//		--m_InventorySlot;
+//		for (int slot : m_WeaponSlots)
+//		{
+//			if (slot == m_InventorySlot)
+//			{
+//				m_CanUseWeapon = true;
+//			}
+//		}
+//		std::cout << "Current selected slot: SLOT(" << m_InventorySlot << ")\n";
+//	}
+//}
+//else if (pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_KP_Plus))
+//{
+//	if (m_InventorySlot < m_TotalSlots)
+//	{
+//		m_CanUseWeapon = false;
+//		++m_InventorySlot;
+//		for (int slot : m_WeaponSlots)
+//		{
+//			if (slot == m_InventorySlot)
+//			{
+//				m_CanUseWeapon = true;
+//			}
+//		}
+//		std::cout << "Current selected slot: SLOT(" << m_InventorySlot << ")\n";
+//	}
+//}

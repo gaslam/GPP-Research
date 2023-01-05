@@ -8,26 +8,23 @@ class InventoryManager
 {
 public:
 	InventoryManager() = default;
-	void GrabItem(IExamInterface* pInterface, EntityInfo& entity, ItemInfo& item);
+	bool GrabItem(IExamInterface* pInterface, EntityInfo& entity, ItemInfo& item);
 	void UseItem(IExamInterface* pInterface);
 	void RemoveItem(IExamInterface* pInterface);
-	void SetUseItem(const bool canUseItem) { m_UseItem = canUseItem; };
 	void SetGrabItem(const bool canGrabItem) { m_GrabItem = canGrabItem; };
-	void SetRemoveItem(const bool canRemoveItem) { m_RemoveItem = canRemoveItem; };
 	bool CanGrabItem() const { return m_GrabItem; };
-	bool CanUseItem() const { return m_UseItem; };
-	bool CanRemoveItem() const { return m_RemoveItem; };
 	bool PlayerUsesWeapon() const { return m_CanUseWeapon; };
-	UINT GetInventorySlot() const { return m_InventorySlot; };
+	bool IsFull() const { return m_IsFull; };
 
-	ItemInfo ReturnPlayerSelectedItemInfo(IExamInterface* pInterface);
+	static bool GetItemInfo(IExamInterface* pInterface, EntityInfo& entity, ItemInfo& item);
 private:
+	bool m_IsFull = false;
 	bool m_GrabItem = false;
 	bool m_UseItem = false;
 	bool m_RemoveItem = false;
 	bool m_CanUseWeapon = false;
 	UINT m_InventorySlot = 0;
-	const int m_TotalSlots = 4;
+	const int m_TotalSlots = 5;
 	std::vector<int> m_WeaponSlots{};
 };
 

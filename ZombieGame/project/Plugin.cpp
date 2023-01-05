@@ -48,6 +48,7 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	m_pBlackboard->AddData("AgentFleeTarget", Elite::Vector2());
 	m_pBlackboard->AddData("InventoryManager", m_pInventoryManager);
 	m_pBlackboard->AddData("Target", m_Target);
+	m_pBlackboard->AddData("EntityToPick", EntityInfo{});
 
 	BehaviorSequence* pMoveToTarget{
 		new BehaviorSequence({
@@ -78,15 +79,31 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 new BehaviorAction(BT_Actions::ChangeToFace)
 }) };
 
+	BehaviorSequence* pGoToItem{ new BehaviorSequence({
+		new BehaviorConditional(BT_Conditions::IsUsableItemInFov),
+		new BehaviorAction(BT_Actions::ChangeToArriveAndFace),
+		new BehaviorConditional(BT_Conditions::CanPlayerGrabItem),
+		new BehaviorAction(BT_Actions::GrabItem),
+}) };
+
 
 	m_pBehaviors->pDecisionMaking = new Elite::BehaviorTree{ m_pBlackboard,
 		new BehaviorSelector(
 			{
 				new BehaviorSelector({
-					pFleePurgeZone,
-					pEvadeAndShootEnemy,
-					pTurnIfBitten,
-					pEvadeEnemy
+				new BehaviorSelector({
+					pGoToItem
+					}),
+					new BehaviorSequence({
+						new BehaviorSequence({}),
+						new BehaviorSequence({}),
+						new BehaviorSelector({
+							pFleePurgeZone,
+							pEvadeAndShootEnemy,
+							pTurnIfBitten,
+							pEvadeEnemy
+							}),
+					}),
 				}),
 				pMoveToTarget
 			}
@@ -102,6 +119,7 @@ Plugin::~Plugin()
 	SAFE_DELETE(m_pBehaviors->pWander);
 	SAFE_DELETE(m_pBehaviors->pSeek);
 	SAFE_DELETE(m_pBehaviors->pArrive);
+	SAFE_DELETE(m_pBehaviors->pDecisionMaking);
 	//SAFE_DELETE(m_pInterface);
 	//SAFE_DELETE(m_pSteeringBehavior);
 	//SAFE_DELETE(m_pDecisionMaking);
@@ -206,46 +224,15 @@ SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 	//OR, Use the mouse target
 	//Uncomment this to use mouse position as guidance
 
-	auto vHousesInFOV = GetHousesInFOV();//uses m_pInterface->Fov_GetHouseByIndex(...)
-	auto vEntitiesInFOV = GetEntitiesInFOV(); //uses m_pInterface->Fov_GetEntityByIndex(...)
 
-	for (auto& e : vEntitiesInFOV)
-	{
-		if (e.Type == eEntityType::PURGEZONE)
-		{
-			PurgeZoneInfo zoneInfo;
-			m_pInterface->PurgeZone_GetInfo(e, zoneInfo);
-			//std::cout << "Purge Zone in FOV:" << e.Location.x << ", "<< e.Location.y << "---Radius: "<< zoneInfo.Radius << std::endl;
-		}
-	}
-
-	if (m_pInventoryManager->CanGrabItem())
-	{
-		ItemInfo item;
-		//Item_Grab > When DebugParams.AutoGrabClosestItem is TRUE, the Item_Grab function returns the closest item in range
-		//Keep in mind that DebugParams are only used for debugging purposes, by default this flag is FALSE
-		//Otherwise, use GetEntitiesInFOV() to retrieve a vector of all entities in the FOV (EntityInfo)
-		//Item_Grab gives you the ItemInfo back, based on the passed EntityHash (retrieved by GetEntitiesInFOV)
-		auto entities = GetEntitiesInFOV();
-		for (size_t i{}; i < entities.size(); ++i)
-		{
-			if ((agentInfo.Position - entities[i].Location).MagnitudeSquared() < agentInfo.GrabRange * agentInfo.GrabRange)
-			{
-				m_pInventoryManager->GrabItem(m_pInterface, entities[i], item);
-			}
-		}
-	}
-	m_pInventoryManager->UseItem(m_pInterface);
-	m_pInventoryManager->RemoveItem(m_pInterface);
+	//m_pInventoryManager->UseItem(m_pInterface);
+	//m_pInventoryManager->RemoveItem(m_pInterface);
 
 	//steering.AngularVelocity = m_AngSpeed; //Rotate your character to inspect the world while walking
 
 	steering.RunMode = m_CanRun; //If RunMode is True > MaxLinSpd is increased for a limited time (till your stamina runs out)
 
 	//SteeringPlugin_Output is works the exact same way a SteeringBehaviour output
-	m_pInventoryManager->SetGrabItem(false);
-	m_pInventoryManager->SetRemoveItem(false);
-	m_pInventoryManager->SetUseItem(false);
 
 	if (!m_pBlackboard->ChangeData("InventoryManager", m_pInventoryManager))
 	{
@@ -261,41 +248,4 @@ void Plugin::Render(float dt) const
 	//This Render function should only contain calls to Interface->Draw_... functions
 	m_pGrid->DrawGrid(m_pInterface);
 	m_pInterface->Draw_SolidCircle(m_Target, .7f, { 0,0 }, { 1, 0, 0 });
-}
-
-vector<HouseInfo> Plugin::GetHousesInFOV() const
-{
-	vector<HouseInfo> vHousesInFOV = {};
-
-	HouseInfo hi = {};
-	for (int i = 0;; ++i)
-	{
-		if (m_pInterface->Fov_GetHouseByIndex(i, hi))
-		{
-			vHousesInFOV.push_back(hi);
-			continue;
-		}
-
-		break;
-	}
-
-	return vHousesInFOV;
-}
-
-vector<EntityInfo> Plugin::GetEntitiesInFOV() const
-{
-	vector<EntityInfo> vEntitiesInFOV = {};
-
-	EntityInfo ei = {};
-	for (int i = 0;; ++i)
-	{
-		if (m_pInterface->Fov_GetEntityByIndex(i, ei))
-		{
-			vEntitiesInFOV.push_back(ei);
-			continue;
-		}
-
-		break;
-	}
-	return vEntitiesInFOV;
 }

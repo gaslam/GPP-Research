@@ -35,9 +35,6 @@ private:
 	InventoryManager* m_pInventoryManager{nullptr};
 	Grid* m_pGrid{};
 
-	std::vector<HouseInfo> GetHousesInFOV() const;
-	std::vector<EntityInfo> GetEntitiesInFOV() const;
-
 	Elite::Vector2 m_Target = {};
 	bool m_CanRun = false; //Demo purpose
 	float m_AngSpeed = 0.f; //Demo purpose

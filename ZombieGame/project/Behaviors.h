@@ -26,9 +26,9 @@ namespace BT_Actions
 {
 	inline BehaviorState ChangeToSeekAndWander(Blackboard* pBlackboard)
 	{
-		IExamInterface* pInterface{nullptr};
+		IExamInterface* pInterface{ nullptr };
 		ISteeringBehavior* pSteering{ nullptr };
-		SteeringBehaviors* pBehaviors{nullptr};
+		SteeringBehaviors* pBehaviors{ nullptr };
 		Vector2 target{};
 
 		if (!pBlackboard->GetData("SelectedBehavior", pSteering) || pSteering == nullptr)
@@ -97,6 +97,50 @@ namespace BT_Actions
 		pBehaviors->pArrive->SetTarget(target);
 
 		pSteering = pBehaviors->pArrive;
+
+		if (!pBlackboard->ChangeData("SelectedBehavior", pSteering))
+		{
+			return BehaviorState::Failure;
+		}
+
+		return BehaviorState::Success;
+	}
+
+	inline BehaviorState ChangeToArriveAndFace(Blackboard* pBlackboard)
+	{
+		ISteeringBehavior* pSteering{ nullptr };
+		SteeringBehaviors* pBehaviors{ nullptr };
+		IExamInterface* pInterface{};
+		Vector2 target;
+		if (!pBlackboard->GetData("SelectedBehavior", pSteering) || pSteering == nullptr)
+		{
+			return BehaviorState::Failure;
+		}
+
+		if (!pBlackboard->GetData("Behaviors", pBehaviors) || pBehaviors == nullptr)
+		{
+			return BehaviorState::Failure;
+		}
+
+		if (!pBlackboard->GetData("Interface", pInterface) || pInterface == nullptr)
+		{
+			return BehaviorState::Failure;
+		}
+
+		if (!pBlackboard->GetData("Target", target))
+		{
+			return BehaviorState::Failure;
+		}
+
+		auto agentInfo = pInterface->Agent_GetInfo();
+
+		pBehaviors->pArrive->SetSlowRadius(agentInfo.GrabRange);
+		pBehaviors->pArrive->SetTargetRadius(agentInfo.GrabRange / 4.f);
+		pBehaviors->pArrive->SetTarget(target);
+
+		pBehaviors->pFace->SetTarget(target);
+
+		pSteering = pBehaviors->pArriveAndFace;
 
 		if (!pBlackboard->ChangeData("SelectedBehavior", pSteering))
 		{
@@ -254,6 +298,47 @@ namespace BT_Actions
 
 		return BehaviorState::Success;
 	}
+
+	inline BehaviorState GrabItem(Blackboard* pBlackboard)
+	{
+		InventoryManager* pInventory;
+		IExamInterface* pInterface;
+		EntityInfo entity;
+
+		if (!pBlackboard->GetData("InventoryManager", pInventory) || pInventory == nullptr)
+		{
+			return BehaviorState::Failure;
+		}
+
+
+		if (!pBlackboard->GetData("Interface", pInterface) || pInterface == nullptr)
+		{
+			return BehaviorState::Failure;
+		}
+
+		if (!pBlackboard->GetData("EntityToPick", entity))
+		{
+			return BehaviorState::Failure;
+		}
+
+		if (!pInventory->CanGrabItem())
+		{
+			return BehaviorState::Failure;
+		}
+
+		ItemInfo item{};
+		if (!pInventory->GetItemInfo(pInterface, entity, item))
+		{
+			return BehaviorState::Failure;
+		}
+
+		if (!pInventory->GrabItem(pInterface, entity, item))
+		{
+			return BehaviorState::Failure;
+		}
+
+		return BehaviorState::Success;
+	}
 }
 
 namespace BT_Conditions
@@ -275,7 +360,7 @@ namespace BT_Conditions
 		}
 
 		auto agentInfo = pInterface->Agent_GetInfo();
-		
+
 		float totalRadAgentGrabPlusTarget{ (agentInfo.GrabRange * 2.f) };
 		totalRadAgentGrabPlusTarget *= totalRadAgentGrabPlusTarget;
 
@@ -309,8 +394,6 @@ namespace BT_Conditions
 
 		ItemInfo info = {};
 
-		auto test = pManager->ReturnPlayerSelectedItemInfo(pInterface);
-
 		if (info.Type != eItemType::SHOTGUN && info.Type != eItemType::PISTOL)
 		{
 			return false;
@@ -318,14 +401,14 @@ namespace BT_Conditions
 
 
 
-		const int ammo = pInterface->Weapon_GetAmmo(test);
+		//const int ammo = pInterface->Weapon_GetAmmo(test);
 
-		if (ammo <= 0)
-		{
-			return false;
-		}
+		//if (ammo <= 0)
+		//{
+		//	return false;
+		//}
 
-		return true;
+		return false;
 
 	}
 
@@ -393,7 +476,7 @@ namespace BT_Conditions
 			return false;
 		}
 
-		if (!pBlackboard->GetData("AgentFleeTarget",target))
+		if (!pBlackboard->GetData("AgentFleeTarget", target))
 		{
 			return false;
 		}
@@ -404,7 +487,7 @@ namespace BT_Conditions
 		if (agentInfo.Bitten && !enemyAttacked)
 		{
 			enemyAttacked = true;
-			target = agentInfo.Position + ( - agentInfo.LinearVelocity);
+			target = agentInfo.Position + (-agentInfo.LinearVelocity);
 
 			if (!pBlackboard->ChangeData("AgentFleeTarget", target))
 			{
@@ -461,6 +544,119 @@ namespace BT_Conditions
 
 			break;
 		}
+		return false;
+	}
+
+	inline bool IsUsableItemInFov(Blackboard* pBlackboard)
+	{
+		IExamInterface* pInterface{ nullptr };
+		SteeringBehaviors* pBehaviors{ nullptr };
+		InventoryManager* pInventory{ nullptr };
+		Vector2 target{};
+
+		if (!pBlackboard->GetData("InventoryManager", pInventory) || pInventory == nullptr)
+		{
+			return false;
+		}
+
+		if (pInventory->IsFull())
+		{
+			return false;
+		}
+
+		if (!pBlackboard->GetData("Interface", pInterface) || pInterface == nullptr)
+		{
+			return false;
+		}
+
+		if (!pBlackboard->GetData("Behaviors", pBehaviors) || pBehaviors == nullptr)
+		{
+			return false;
+		}
+
+		if (!pBlackboard->GetData("Target", target))
+		{
+			return false;
+		}
+
+		EntityInfo ei = {};
+		float closestDistance{ FLT_MAX };
+		bool hasItem{ false };
+
+		auto agentInfo = pInterface->Agent_GetInfo();
+
+		for (int i = 0;; ++i)
+		{
+			if (pInterface->Fov_GetEntityByIndex(i, ei))
+			{
+				if (ei.Type == eEntityType::ITEM)
+				{
+					ItemInfo item;
+					if (pInterface->Item_GetInfo(ei, item) && item.Type != eItemType::GARBAGE)
+					{
+						hasItem = true;
+						const float newDistance{ agentInfo.Position.DistanceSquared(item.Location) };
+						if (newDistance < closestDistance)
+						{
+							target = item.Location;
+							closestDistance = newDistance;
+
+							if (!pBlackboard->ChangeData("EntityToPick", ei))
+							{
+								return false;
+							}
+						}
+					}
+				}
+				continue;
+			}
+			break;
+		}
+
+		if (!hasItem)
+		{
+			return false;
+		}
+
+		if (!pBlackboard->ChangeData("Target", target))
+		{
+			return false;
+		}
+
+		return true;
+	}
+
+	inline bool CanPlayerGrabItem(Blackboard* pBlackboard)
+	{
+		IExamInterface* pInterface{ nullptr };
+		InventoryManager* pInventory{ nullptr };
+
+		EntityInfo entityToPick{};
+
+		if (!pBlackboard->GetData("Interface", pInterface) || pInterface == nullptr)
+		{
+			return false;
+		}
+
+
+		if (!pBlackboard->GetData("EntityToPick", entityToPick))
+		{
+			return false;
+		}
+
+		if (!pBlackboard->GetData("InventoryManager", pInventory) || pInventory == nullptr)
+		{
+			return false;
+		}
+
+		auto agentInfo = pInterface->Agent_GetInfo();
+
+		if ((agentInfo.Position - entityToPick.Location).MagnitudeSquared() <= agentInfo.GrabRange * agentInfo.GrabRange)
+		{
+			pInventory->SetGrabItem(true);
+			return true;
+		}
+		pInventory->SetGrabItem(false);
 		return false;
 	}
 }
