@@ -55,6 +55,7 @@ public:
 	virtual ~Flee() = default;
 
 	SteeringPlugin_Output_Extended CalculateSteering(float deltaT, AgentInfo& pAgent) override;
+	void SetRadius(float radius) { m_Radius = radius; };
 private:
 	float m_Radius = 20.f;
 
@@ -102,7 +103,7 @@ public:
 protected:
 	float m_OffsetDistance{ 6.f };
 	float m_Radius{ 4.f };
-	float m_MaxAngleChange{ Elite::ToRadians(45.f) };
+	float m_MaxAngleChange{ Elite::ToRadians(30.f) };
 	float m_WanderAngle{ 0.f };
 };
 

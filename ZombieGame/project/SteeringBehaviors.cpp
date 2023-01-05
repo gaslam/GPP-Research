@@ -74,6 +74,7 @@ SteeringPlugin_Output_Extended Arrive::CalculateSteering(float deltaT, AgentInfo
 
 	if (distance < m_Radius * m_Radius)
 	{
+		steering.LinearVelocity = direction;
 		steering.LinearVelocity.Normalize();
 		steering.LinearVelocity *= m_SlowSpeed;
 		return steering;
@@ -81,11 +82,14 @@ SteeringPlugin_Output_Extended Arrive::CalculateSteering(float deltaT, AgentInfo
 
 	if (distance < m_SlowRadius * m_SlowRadius)
 	{
-		steering.LinearVelocity = direction;
 		steering.LinearVelocity.Normalize();
 		steering.LinearVelocity *= m_SlowSpeed;
 		return steering;
 	}
+
+	steering.LinearVelocity = direction;
+	steering.LinearVelocity.Normalize();
+	steering.LinearVelocity *= pAgent.MaxLinearSpeed;
 
 	return steering;
 }
@@ -123,18 +127,6 @@ SteeringPlugin_Output_Extended Wander::CalculateSteering(float deltaT, AgentInfo
 
 	Elite::Vector2 newRotation{ cosf(m_WanderAngle) * m_Radius, sinf(m_WanderAngle) * m_Radius };
 	Elite::Vector2 pointOnCircle{ circleCenter + newRotation };
-
-	//if (pAgent->CanRenderBehavior())
-	//{
-	//	DEBUGRENDERER2D->DrawDirection(agentPos, circleCenter - agentPos, m_OffsetDistance, { 0,1,0 });
-	//	DEBUGRENDERER2D->DrawCircle(circleCenter, m_Radius, { 1,0,0 }, 0.f);
-	//	DEBUGRENDERER2D->DrawDirection(agentPos, pointOnCircle - agentPos, (agentPos - circleCenter - newRotation).Magnitude(), { 0,1,0 });
-	//	DEBUGRENDERER2D->DrawPoint(circleCenter, 5.f, { 0,1,0 });
-	//	//left or right distance compared to agent with the current direction
-	//	const Elite::Vector2 lineDir{ Elite::Vector2(cosf(rotation + Elite::ToRadians(90.f)) * m_OffsetDistance, sinf(rotation + Elite::ToRadians(90.f)) * m_OffsetDistance) };
-	//	const Elite::Color lightBlue{ 0.1843137254901961f,0.9764705882352941f,0.9882352941176471f };
-	//	DEBUGRENDERER2D->DrawDirection(agentPos, lineDir, pointOnCircle.x - circleCenter.x, lightBlue);
-	//}
 	steering.LinearVelocity = pointOnCircle - agentPos;
 	steering.LinearVelocity.Normalize();
 	steering.LinearVelocity *= pAgent.MaxLinearSpeed;

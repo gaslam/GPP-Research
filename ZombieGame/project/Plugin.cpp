@@ -7,6 +7,7 @@
 #include "Behaviors.h"
 #include "CombinedSteeringBehaviors.h"
 #include "InventoryManager.h"
+#include "Grid.h"
 
 using namespace std;
 
@@ -16,6 +17,7 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	//Retrieving the interface
 	//This interface gives you access to certain actions the AI_Framework can perform for you
 	m_pInterface = static_cast<IExamInterface*>(pInterface);
+	m_pGrid = new Grid{ m_pInterface, 30 };
 
 	//Bit information about the plugin
 	//Please fill this in!!
@@ -33,7 +35,7 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	m_pBehaviors->pFace = new Face{};
 	m_pBehaviors->pFlee = new Flee{};
 
-	m_pBehaviors->pWanderAndSeek = new BlendedSteering{ {{m_pBehaviors->pWander,0.6f},{m_pBehaviors->pSeek,1.f}} };
+	m_pBehaviors->pWanderAndSeek = new BlendedSteering{ {{m_pBehaviors->pWander,.8f},{m_pBehaviors->pSeek,.6f}} };
 	m_pBehaviors->pArriveAndFace = new BlendedSteering{ {{m_pBehaviors->pArrive, 1.f},{m_pBehaviors->pFace, 0.5f}} };
 	m_pBehaviors->pEvadeAndFace = new PrioritySteering{ {m_pBehaviors->pEvade, m_pBehaviors->pFace} };
 
@@ -59,24 +61,31 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 			new BehaviorAction(BT_Actions::ChangeToEvade)
 		}) };
 
-	BehaviorSequence* pFleeEnemyIfBitten{ new BehaviorSequence({
-		new BehaviorConditional(BT_Conditions::IsPlayerBitten),
-		new BehaviorAction(BT_Actions::ChangeToFlee)
-		})
-	};
-
 	BehaviorSequence* pEvadeAndShootEnemy{ new BehaviorSequence({
 		new BehaviorConditional(BT_Conditions::IsEnemyInFov),
 		new BehaviorConditional(BT_Conditions::DoesPlayerHaveUsableWeapon),
 		new BehaviorAction(BT_Actions::ChangeToEvadeAndShoot)
 	}) };
 
+	BehaviorSequence* pFleePurgeZone{ new BehaviorSequence({
+	new BehaviorConditional(BT_Conditions::IsPlayerInPurgeZone),
+	new BehaviorAction(BT_Actions::ChangeToFlee)
+}) };
+
+	BehaviorSequence* pTurnIfBitten{ new BehaviorSequence({
+	new BehaviorConditional(BT_Conditions::IsPlayerBitten),
+	new BehaviorConditional(BT_Conditions::DoesPlayerHaveUsableWeapon),
+new BehaviorAction(BT_Actions::ChangeToFace)
+}) };
+
+
 	m_pBehaviors->pDecisionMaking = new Elite::BehaviorTree{ m_pBlackboard,
 		new BehaviorSelector(
 			{
 				new BehaviorSelector({
-					pFleeEnemyIfBitten,
+					pFleePurgeZone,
 					pEvadeAndShootEnemy,
+					pTurnIfBitten,
 					pEvadeEnemy
 				}),
 				pMoveToTarget
@@ -135,6 +144,7 @@ void Plugin::Update(float dt)
 {
 	//Demo Event Code
 	//In the end your AI should be able to walk around without external input
+
 	if (m_pInterface->Input_IsMouseButtonUp(Elite::InputMouseButton::eLeft))
 	{
 		//Update target based on input
@@ -143,7 +153,8 @@ void Plugin::Update(float dt)
 		m_Target = m_pInterface->Debug_ConvertScreenToWorld(pos);
 		m_pBlackboard->ChangeData("Target", m_Target);
 	}
-	else if (m_pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_Space))
+
+	if (m_pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_Space))
 	{
 		m_CanRun = true;
 	}
@@ -163,8 +174,7 @@ void Plugin::Update(float dt)
 	{
 		m_pInterface->RequestShutdown();
 	}
-
-	m_pInventoryManager->Update(m_pInterface);
+	UpdateSteering(dt);
 }
 
 //Update
@@ -174,6 +184,12 @@ SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 
 	//Use the Interface (IAssignmentInterface) to 'interface' with the AI_Framework
 	AgentInfo agentInfo = m_pInterface->Agent_GetInfo();
+	m_pGrid->Update(m_pInterface);
+
+#ifndef _DEBUG
+	m_Target = m_pGrid->GetNextAvailableCellPos(agentInfo.Position);
+	m_pBlackboard->ChangeData("Target", m_Target);
+#endif // !_DEBUG
 	m_pBehaviors->pDecisionMaking->Update(dt);
 
 	auto nextTargetPos = m_pInterface->NavMesh_GetClosestPathPoint(m_Target);
@@ -243,6 +259,7 @@ SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 void Plugin::Render(float dt) const
 {
 	//This Render function should only contain calls to Interface->Draw_... functions
+	m_pGrid->DrawGrid(m_pInterface);
 	m_pInterface->Draw_SolidCircle(m_Target, .7f, { 0,0 }, { 1, 0, 0 });
 }
 

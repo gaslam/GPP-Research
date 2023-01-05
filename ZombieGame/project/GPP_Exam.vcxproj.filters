@@ -3,23 +3,24 @@
   <ItemGroup>
     <ClCompile Include="Plugin.cpp" />
     <ClCompile Include="stdafx.cpp" />
-    <ClCompile Include="EBehaviorTree.cpp" />
-    <ClCompile Include="CombinedSteeringBehaviors.cpp" />
     <ClCompile Include="SteeringBehaviors.cpp" />
+    <ClCompile Include="CombinedSteeringBehaviors.cpp" />
+    <ClCompile Include="EBehaviorTree.cpp" />
+    <ClCompile Include="Grid.cpp" />
     <ClCompile Include="InventoryManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Plugin.h" />
     <ClInclude Include="stdafx.h" />
-    <ClInclude Include="framework\EliteAI\EliteData\EBlackboard.h" />
-    <ClInclude Include="EBehaviorTree.h" />
-    <ClInclude Include="framework\EliteAI\EliteDecisionMaking\EDecisionMaking.h" />
-    <ClInclude Include="EDecisionMaking.h" />
-    <ClInclude Include="EBlackboard.h" />
-    <ClInclude Include="Behaviors.h" />
-    <ClInclude Include="CombinedSteeringBehaviors.h" />
+    <ClInclude Include="Utils.h" />
     <ClInclude Include="SteeringBehaviors.h" />
     <ClInclude Include="SteeringHelpers.h" />
     <ClInclude Include="InventoryManager.h" />
+    <ClInclude Include="Behaviors.h" />
+    <ClInclude Include="CombinedSteeringBehaviors.h" />
+    <ClInclude Include="EBehaviorTree.h" />
+    <ClInclude Include="EBlackboard.h" />
+    <ClInclude Include="EDecisionMaking.h" />
+    <ClInclude Include="Grid.h" />
   </ItemGroup>
 </Project>

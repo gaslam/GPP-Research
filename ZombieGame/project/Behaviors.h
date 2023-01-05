@@ -92,12 +92,11 @@ namespace BT_Actions
 
 		auto agentInfo = pInterface->Agent_GetInfo();
 
-		pBehaviors->pArrive->SetSlowRadius(agentInfo.GrabRange / 2.f);
+		pBehaviors->pArrive->SetSlowRadius(agentInfo.GrabRange);
 		pBehaviors->pArrive->SetTargetRadius(agentInfo.GrabRange / 4.f);
 		pBehaviors->pArrive->SetTarget(target);
-		pBehaviors->pFace->SetTarget(target);
 
-		pSteering = pBehaviors->pFace;
+		pSteering = pBehaviors->pArrive;
 
 		if (!pBlackboard->ChangeData("SelectedBehavior", pSteering))
 		{
@@ -173,6 +172,43 @@ namespace BT_Actions
 		pBehaviors->pEvade->SetRadius(7.5f);
 		pBehaviors->pFace->SetTarget(target);
 		pSteering = pBehaviors->pEvadeAndFace;
+
+		if (!pBlackboard->ChangeData("SelectedBehavior", pSteering))
+		{
+			return BehaviorState::Failure;
+		}
+
+		return BehaviorState::Success;
+	}
+
+	inline BehaviorState ChangeToFace(Blackboard* pBlackboard)
+	{
+		ISteeringBehavior* pSteering{ nullptr };
+		SteeringBehaviors* pBehaviors{ nullptr };
+		Vector2 target;
+
+		if (!pBlackboard->GetData("SelectedBehavior", pSteering) || pSteering == nullptr)
+		{
+			return BehaviorState::Failure;
+		}
+
+		if (!pBlackboard->GetData("Behaviors", pBehaviors) || pBehaviors == nullptr)
+		{
+			return BehaviorState::Failure;
+		}
+
+		if (!pBlackboard->GetData("AgentFleeTarget", target))
+		{
+			return BehaviorState::Failure;
+		}
+
+		if (pBehaviors->pEvade == nullptr || pBehaviors->pFace == nullptr || pBehaviors->pEvadeAndFace == nullptr)
+		{
+			return BehaviorState::Failure;
+		}
+
+		pBehaviors->pFace->SetTarget(target);
+		pSteering = pBehaviors->pFace;
 
 		if (!pBlackboard->ChangeData("SelectedBehavior", pSteering))
 		{
@@ -293,6 +329,8 @@ namespace BT_Conditions
 
 	}
 
+
+	bool enemyAttacked{ false };
 	inline bool IsEnemyInFov(Blackboard* pBlackboard)
 	{
 		std::vector<EntityInfo> enemiesInFov{};
@@ -312,6 +350,7 @@ namespace BT_Conditions
 				if (ei.Type == eEntityType::ENEMY)
 				{
 					enemiesInFov.push_back(ei);
+					enemyAttacked = false;
 				}
 				continue;
 			}
@@ -345,6 +384,8 @@ namespace BT_Conditions
 	inline bool IsPlayerBitten(Blackboard* pBlackboard)
 	{
 		IExamInterface* pInterface{ nullptr };
+		InventoryManager* pManager{ nullptr };
+		SteeringBehaviors* pBehaviors{ nullptr };
 		Vector2 target{};
 
 		if (!pBlackboard->GetData("Interface", pInterface) || pInterface == nullptr)
@@ -352,15 +393,75 @@ namespace BT_Conditions
 			return false;
 		}
 
-		auto agentInfo = pInterface->Agent_GetInfo();
-		target = agentInfo.Position;
-
-		if (!agentInfo.Bitten)
+		if (!pBlackboard->GetData("AgentFleeTarget",target))
 		{
 			return false;
 		}
 
-		return IsEnemyInFov(pBlackboard);
+		auto agentInfo = pInterface->Agent_GetInfo();
+		target = agentInfo.Position;
+
+		if (agentInfo.Bitten && !enemyAttacked)
+		{
+			enemyAttacked = true;
+			target = agentInfo.Position + ( - agentInfo.LinearVelocity);
+
+			if (!pBlackboard->ChangeData("AgentFleeTarget", target))
+			{
+				return false;
+			}
+		}
+		if (!enemyAttacked)
+		{
+			return false;
+		}
+
+		if (!pBlackboard->GetData("Behaviors", pBehaviors) || pBehaviors == nullptr)
+		{
+			return false;
+		}
+
+		return true;
+	}
+
+	inline bool IsPlayerInPurgeZone(Blackboard* pBlackboard)
+	{
+		IExamInterface* pInterface{ nullptr };
+		SteeringBehaviors* pBehaviors{ nullptr };
+
+		if (!pBlackboard->GetData("Interface", pInterface) || pInterface == nullptr)
+		{
+			return false;
+		}
+
+		if (!pBlackboard->GetData("Behaviors", pBehaviors) || pBehaviors == nullptr)
+		{
+			return false;
+		}
+
+		EntityInfo ei = {};
+		for (int i = 0;; ++i)
+		{
+			if (pInterface->Fov_GetEntityByIndex(i, ei))
+			{
+				if (ei.Type == eEntityType::PURGEZONE)
+				{
+					PurgeZoneInfo zoneInfo{};
+					pInterface->PurgeZone_GetInfo(ei, zoneInfo);
+
+					pBehaviors->pFlee->SetRadius(zoneInfo.Radius);
+					if (!pBlackboard->ChangeData("AgentFleeTarget", zoneInfo.Center))
+					{
+						return false;
+					}
+					return true;
+				}
+				continue;
+			}
+
+			break;
+		}
+		return false;
 	}
 }
 

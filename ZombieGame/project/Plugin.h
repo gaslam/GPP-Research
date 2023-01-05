@@ -8,6 +8,7 @@ class IBaseInterface;
 class IExamInterface;
 class ISteeringBehavior;
 class InventoryManager;
+class Grid;
 class Plugin :public IExamPlugin
 {
 public:
@@ -32,6 +33,7 @@ private:
 
 	SteeringBehaviors* m_pBehaviors{new SteeringBehaviors()};
 	InventoryManager* m_pInventoryManager{nullptr};
+	Grid* m_pGrid{};
 
 	std::vector<HouseInfo> GetHousesInFOV() const;
 	std::vector<EntityInfo> GetEntitiesInFOV() const;

@@ -39,3 +39,6 @@
 #pragma endregion
 
 #define SAFE_DELETE(p) if (p) { delete (p); (p) = nullptr; }
+#ifndef _DEBUG // works in VS
+#define DEBUG(x) 
+#endif

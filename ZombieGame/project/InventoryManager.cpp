@@ -21,11 +21,6 @@ void InventoryManager::GrabItem(IExamInterface* pInterface, EntityInfo& entity, 
 			}
 }
 
-void InventoryManager::Update(IExamInterface* pInterface)
-{
-	HandleControls(pInterface);
-}
-
 ItemInfo InventoryManager::ReturnPlayerSelectedItemInfo(IExamInterface* pInterface)
 {
 	ItemInfo info{};
@@ -54,55 +49,34 @@ void InventoryManager::RemoveItem(IExamInterface* pInterface)
 	}
 }
 
-void InventoryManager::HandleControls(IExamInterface* pInterface)
-{
-	if (pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_G))
-	{
-		m_GrabItem = true;
-	}
-	else if (pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_U))
-	{
-		m_UseItem = true;
-	}
-	else if (pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_R))
-	{
-		m_RemoveItem = true;
-	}
-	else if (pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_Q))
-	{
-		ItemInfo info = ReturnPlayerSelectedItemInfo(pInterface);
-		std::cout << (int)info.Type << std::endl;
-	}
-	else if (pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_KP_Minus))
-	{
-		if (m_InventorySlot > 0)
-		{
-			m_CanUseWeapon = false;
-			--m_InventorySlot;
-			for (int slot : m_WeaponSlots)
-			{
-				if (slot == m_InventorySlot)
-				{
-					m_CanUseWeapon = true;
-				}
-			}
-			std::cout << "Current selected slot: SLOT(" << m_InventorySlot << ")\n";
-		}
-	}
-	else if (pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_KP_Plus))
-	{
-		if (m_InventorySlot < m_TotalSlots)
-		{
-			m_CanUseWeapon = false;
-			++m_InventorySlot;
-			for (int slot : m_WeaponSlots)
-			{
-				if (slot == m_InventorySlot)
-				{
-					m_CanUseWeapon = true;
-				}
-			}
-			std::cout << "Current selected slot: SLOT(" << m_InventorySlot << ")\n";
-		}
-	}
-}
+
+	//	if (m_InventorySlot > 0)
+	//	{
+	//		m_CanUseWeapon = false;
+	//		--m_InventorySlot;
+	//		for (int slot : m_WeaponSlots)
+	//		{
+	//			if (slot == m_InventorySlot)
+	//			{
+	//				m_CanUseWeapon = true;
+	//			}
+	//		}
+	//		std::cout << "Current selected slot: SLOT(" << m_InventorySlot << ")\n";
+	//	}
+	//}
+	//else if (pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_KP_Plus))
+	//{
+	//	if (m_InventorySlot < m_TotalSlots)
+	//	{
+	//		m_CanUseWeapon = false;
+	//		++m_InventorySlot;
+	//		for (int slot : m_WeaponSlots)
+	//		{
+	//			if (slot == m_InventorySlot)
+	//			{
+	//				m_CanUseWeapon = true;
+	//			}
+	//		}
+	//		std::cout << "Current selected slot: SLOT(" << m_InventorySlot << ")\n";
+	//	}
+	//}
