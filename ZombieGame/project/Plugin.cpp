@@ -86,23 +86,35 @@ new BehaviorAction(BT_Actions::ChangeToFace)
 		new BehaviorAction(BT_Actions::GrabItem),
 }) };
 
+	BehaviorSequence* pUseMedkitIfPossible{ new BehaviorSequence({
+		new BehaviorConditional(BT_Conditions::IsPlayerHealthLow),
+		new BehaviorAction(BT_Actions::UseMedkitIfPossible)
+})
+	};
+
+	BehaviorSequence* pUseFoodIfPossible{ new BehaviorSequence({
+	new BehaviorConditional(BT_Conditions::IsPlayerEnergyLow),
+	new BehaviorAction(BT_Actions::UseFoodIfPossible)
+})
+	};
+
 
 	m_pBehaviors->pDecisionMaking = new Elite::BehaviorTree{ m_pBlackboard,
 		new BehaviorSelector(
 			{
 				new BehaviorSelector({
-				new BehaviorSelector({
-					pGoToItem
+					new BehaviorSelector({
+						pGoToItem
 					}),
 					new BehaviorSequence({
-						new BehaviorSequence({}),
-						new BehaviorSequence({}),
+						pUseMedkitIfPossible,
+						pUseFoodIfPossible,
 						new BehaviorSelector({
 							pFleePurgeZone,
 							pEvadeAndShootEnemy,
 							pTurnIfBitten,
 							pEvadeEnemy
-							}),
+						}),
 					}),
 				}),
 				pMoveToTarget
@@ -119,7 +131,7 @@ Plugin::~Plugin()
 	SAFE_DELETE(m_pBehaviors->pWander);
 	SAFE_DELETE(m_pBehaviors->pSeek);
 	SAFE_DELETE(m_pBehaviors->pArrive);
-	SAFE_DELETE(m_pBehaviors->pDecisionMaking);
+	//SAFE_DELETE(m_pBehaviors->pDecisionMaking);
 	//SAFE_DELETE(m_pInterface);
 	//SAFE_DELETE(m_pSteeringBehavior);
 	//SAFE_DELETE(m_pDecisionMaking);

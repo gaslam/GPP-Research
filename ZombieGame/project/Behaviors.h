@@ -339,6 +339,72 @@ namespace BT_Actions
 
 		return BehaviorState::Success;
 	}
+
+	inline BehaviorState UseMedkitIfPossible(Blackboard* pBlackboard)
+	{
+		InventoryManager* pInventory;
+		IExamInterface* pInterface;
+
+		if (!pBlackboard->GetData("InventoryManager", pInventory) || pInventory == nullptr)
+		{
+			return BehaviorState::Failure;
+		}
+
+		if (!pBlackboard->GetData("Interface", pInterface) || pInterface == nullptr)
+		{
+			return BehaviorState::Failure;
+		}
+
+		ItemInfo item{};
+		int slot{};
+
+		if (!pInventory->GetItem(pInterface, eItemType::MEDKIT, item, slot))
+		{
+			return BehaviorState::Failure;
+		}
+
+		if (!pInventory->UseItem(pInterface, slot))
+		{
+			return BehaviorState::Failure;
+		}
+
+		pInventory->RemoveItem(pInterface, slot);
+
+		return BehaviorState::Success;
+	}
+
+	inline BehaviorState UseFoodIfPossible(Blackboard* pBlackboard)
+	{
+		InventoryManager* pInventory;
+		IExamInterface* pInterface;
+
+		if (!pBlackboard->GetData("InventoryManager", pInventory) || pInventory == nullptr)
+		{
+			return BehaviorState::Failure;
+		}
+
+		if (!pBlackboard->GetData("Interface", pInterface) || pInterface == nullptr)
+		{
+			return BehaviorState::Failure;
+		}
+
+		ItemInfo item{};
+		int slot{};
+
+		if (!pInventory->GetItem(pInterface, eItemType::FOOD, item, slot))
+		{
+			return BehaviorState::Failure;
+		}
+
+		if (!pInventory->UseItem(pInterface, slot))
+		{
+			return BehaviorState::Failure;
+		}
+
+		pInventory->RemoveItem(pInterface, slot);
+
+		return BehaviorState::Success;
+	}
 }
 
 namespace BT_Conditions
@@ -387,10 +453,10 @@ namespace BT_Conditions
 			return false;
 		}
 
-		if (!pManager->PlayerUsesWeapon())
-		{
-			return false;
-		}
+		//if (!pManager->PlayerUsesWeapon())
+		//{
+		//	return false;
+		//}
 
 		ItemInfo info = {};
 
@@ -657,6 +723,88 @@ namespace BT_Conditions
 			return true;
 		}
 		pInventory->SetGrabItem(false);
+		return false;
+	}
+
+	inline bool IsPlayerHealthLow(Blackboard* pBlackboard)
+	{
+		IExamInterface* pInterface{ nullptr };
+		InventoryManager* pInventory{ nullptr };
+		const int maxHealth{ 10 };
+
+		if (!pBlackboard->GetData("Interface", pInterface) || pInterface == nullptr)
+		{
+			return false;
+		}
+
+		if (!pBlackboard->GetData("InventoryManager", pInventory) || pInventory == nullptr)
+		{
+			return false;
+		}
+
+		if (pInventory->IsEmpty())
+		{
+			return false;
+		}
+
+		ItemInfo item{};
+		int slot{};
+
+		if (!pInventory->GetItem(pInterface, eItemType::MEDKIT, item, slot))
+		{
+			return false;
+		}
+
+		auto health = pInterface->Medkit_GetHealth(item);
+
+		auto agentInfo = pInterface->Agent_GetInfo();
+
+		if (agentInfo.Health + health <= maxHealth)
+		{
+			return true;
+		}
+
+		return false;
+	}
+
+	inline bool IsPlayerEnergyLow(Blackboard* pBlackboard)
+	{
+		IExamInterface* pInterface{ nullptr };
+		InventoryManager* pInventory{ nullptr };
+		const int maxEnergy{ 10 };
+
+		if (!pBlackboard->GetData("Interface", pInterface) || pInterface == nullptr)
+		{
+			return false;
+		}
+
+		if (!pBlackboard->GetData("InventoryManager", pInventory) || pInventory == nullptr)
+		{
+			return false;
+		}
+
+		if (pInventory->IsEmpty())
+		{
+			return false;
+		}
+
+		ItemInfo item{};
+		int slot{};
+
+		if (!pInventory->GetItem(pInterface, eItemType::FOOD, item, slot))
+		{
+			return false;
+		}
+
+		int energy = pInterface->Food_GetEnergy(item);
+
+		auto agentInfo = pInterface->Agent_GetInfo();
+
+		if (agentInfo.Energy + energy <= maxEnergy)
+		{
+			return true;
+		}
+
 		return false;
 	}
 }

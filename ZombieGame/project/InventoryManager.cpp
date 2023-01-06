@@ -11,7 +11,6 @@ bool InventoryManager::GrabItem(IExamInterface* pInterface, EntityInfo& entity, 
 	{
 		return false;
 	}
-
 	for (int i{}; i < m_TotalSlots; ++i)
 	{
 		bool itemAdded{ false };
@@ -19,11 +18,7 @@ bool InventoryManager::GrabItem(IExamInterface* pInterface, EntityInfo& entity, 
 		{
 			m_GrabItem = false;
 			itemAdded = true;
-		}
-		if ((item.Type == eItemType::PISTOL || item.Type == eItemType::SHOTGUN) && itemAdded)
-		{
-			m_CanUseWeapon = true;
-			m_WeaponSlots.push_back(i);
+			++m_AmountOfItems;
 		}
 		if (itemAdded)
 		{
@@ -34,30 +29,41 @@ bool InventoryManager::GrabItem(IExamInterface* pInterface, EntityInfo& entity, 
 			return true;
 		}
 	}
+
 	return false;
 }
 
-void InventoryManager::UseItem(IExamInterface* pInterface)
+bool InventoryManager::UseItem(IExamInterface* pInterface, int slot)
 {
-	if (m_UseItem)
-	{
-		//Use an item (make sure there is an item at the given inventory slot)
-		pInterface->Inventory_UseItem(m_InventorySlot);
-	}
+	//Use an item (make sure there is an item at the given inventory slot)
+	return pInterface->Inventory_UseItem(slot);
 }
 
-void InventoryManager::RemoveItem(IExamInterface* pInterface)
+bool InventoryManager::RemoveItem(IExamInterface* pInterface, int slot)
 {
-	if (m_RemoveItem)
+	//Remove an item from a inventory slot
+	if (!pInterface->Inventory_RemoveItem(slot))
 	{
-		//Remove an item from a inventory slot
-		pInterface->Inventory_RemoveItem(m_InventorySlot);
-		std::remove_if(m_WeaponSlots.begin(), m_WeaponSlots.end(), [&](int slot) {
-			return slot == m_InventorySlot;
-			});
-
-		m_IsFull = false;
+		return false;
 	}
+	--m_AmountOfItems;
+	m_IsFull = false;
+	return true;
+}
+
+bool InventoryManager::GetItem(IExamInterface* pInterface, eItemType type, ItemInfo& item, int& slot)
+{
+	for (int i{}; i < m_TotalSlots; ++i)
+	{
+		ItemInfo currentItem{};
+		if (pInterface->Inventory_GetItem(i, currentItem) && currentItem.Type == type)
+		{
+			item = currentItem;
+			slot = i;
+			return true;
+		}
+	}
+	return true;
 }
 
 bool InventoryManager::GetItemInfo(IExamInterface* pInterface, EntityInfo& entity, ItemInfo& item)
@@ -68,35 +74,3 @@ bool InventoryManager::GetItemInfo(IExamInterface* pInterface, EntityInfo& entit
 	}
 	return false;
 }
-
-
-//	if (m_InventorySlot > 0)
-//	{
-//		m_CanUseWeapon = false;
-//		--m_InventorySlot;
-//		for (int slot : m_WeaponSlots)
-//		{
-//			if (slot == m_InventorySlot)
-//			{
-//				m_CanUseWeapon = true;
-//			}
-//		}
-//		std::cout << "Current selected slot: SLOT(" << m_InventorySlot << ")\n";
-//	}
-//}
-//else if (pInterface->Input_IsKeyboardKeyDown(Elite::eScancode_KP_Plus))
-//{
-//	if (m_InventorySlot < m_TotalSlots)
-//	{
-//		m_CanUseWeapon = false;
-//		++m_InventorySlot;
-//		for (int slot : m_WeaponSlots)
-//		{
-//			if (slot == m_InventorySlot)
-//			{
-//				m_CanUseWeapon = true;
-//			}
-//		}
-//		std::cout << "Current selected slot: SLOT(" << m_InventorySlot << ")\n";
-//	}
-//}
