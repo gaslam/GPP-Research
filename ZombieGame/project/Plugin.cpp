@@ -7,6 +7,7 @@
 #include "Behaviors.h"
 #include "CombinedSteeringBehaviors.h"
 #include "InventoryManager.h"
+#include "HouseManager.h"
 #include "Grid.h"
 
 using namespace std;
@@ -34,12 +35,14 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	m_pBehaviors->pEvade = new Evade{};
 	m_pBehaviors->pFace = new Face{};
 	m_pBehaviors->pFlee = new Flee{};
+	m_pBehaviors->pTurn = new Turn{};
+	m_pHouseManager = new HouseManager{};
 
-	m_pBehaviors->pWanderAndSeek = new BlendedSteering{ {{m_pBehaviors->pWander,.8f},{m_pBehaviors->pSeek,.6f}} };
-	m_pBehaviors->pArriveAndFace = new BlendedSteering{ {{m_pBehaviors->pArrive, 1.f},{m_pBehaviors->pFace, 0.5f}} };
+	m_pBehaviors->pWanderAndSeek = new BlendedSteering{ {{m_pBehaviors->pWander,0.7f},{m_pBehaviors->pSeek,0.5f}} };
+	m_pBehaviors->pArriveAndFace = new BlendedSteering{ {{m_pBehaviors->pArrive, 1.f},{m_pBehaviors->pFace, 0.8f}} };
 	m_pBehaviors->pEvadeAndFace = new PrioritySteering{ {m_pBehaviors->pEvade, m_pBehaviors->pFace} };
 
-	m_pBehaviors->pSelectedSteering = m_pBehaviors->pFace;
+	m_pBehaviors->pSelectedSteering = m_pBehaviors->pTurn;
 
 	m_pBlackboard = new Elite::Blackboard{};
 	m_pBlackboard->AddData("Interface", m_pInterface);
@@ -48,7 +51,9 @@ void Plugin::Initialize(IBaseInterface* pInterface, PluginInfo& info)
 	m_pBlackboard->AddData("AgentFleeTarget", Elite::Vector2());
 	m_pBlackboard->AddData("InventoryManager", m_pInventoryManager);
 	m_pBlackboard->AddData("Target", m_Target);
+	m_pBlackboard->AddData("HouseManager", m_pHouseManager);
 	m_pBlackboard->AddData("EntityToPick", EntityInfo{});
+	m_pBlackboard->AddData("CanTurn", m_IsTurning);
 
 	BehaviorSequence* pMoveToTarget{
 		new BehaviorSequence({
@@ -98,15 +103,18 @@ new BehaviorAction(BT_Actions::ChangeToFace)
 })
 	};
 
+	BehaviorSequence* pFindAndSearchHouses{ new BehaviorSequence({
+				new BehaviorConditional(BT_Conditions::IsHouseInPlayerFOV),
+		new BehaviorConditional(BT_Conditions::CanPlayerVisitNextHouse),
+		new BehaviorAction(BT_Actions::ChangeToSeekAndWander)
+		}) };
+
 
 	m_pBehaviors->pDecisionMaking = new Elite::BehaviorTree{ m_pBlackboard,
 		new BehaviorSelector(
 			{
 				new BehaviorSelector({
 					new BehaviorSelector({
-						pGoToItem
-					}),
-					new BehaviorSequence({
 						pUseMedkitIfPossible,
 						pUseFoodIfPossible,
 						new BehaviorSelector({
@@ -116,8 +124,15 @@ new BehaviorAction(BT_Actions::ChangeToFace)
 							pEvadeEnemy
 						}),
 					}),
+					new BehaviorSelector({
+						pGoToItem,
+						pFindAndSearchHouses
+					})
 				}),
-				pMoveToTarget
+			new BehaviorSequence({
+				new BehaviorConditional(BT_Conditions::IsPlayerNotTurning),
+				 pMoveToTarget
+				})
 			}
 		)
 	};
@@ -151,6 +166,7 @@ void Plugin::DllShutdown()
 //Called only once, during initialization
 void Plugin::InitGameDebugParams(GameDebugParams& params)
 {
+	params.SpawnZombieOnRightClick = true;
 	params.AutoFollowCam = true; //Automatically follow the AI? (Default = true)
 	params.RenderUI = true; //Render the IMGUI Panel? (Default = true)
 	params.SpawnEnemies = true; //Do you want to spawn enemies? (Default = true)
@@ -165,7 +181,7 @@ void Plugin::InitGameDebugParams(GameDebugParams& params)
 	params.SpawnPurgeZonesOnMiddleClick = true;
 	params.PrintDebugMessages = true;
 	params.ShowDebugItemNames = true;
-	params.Seed = 36;
+	params.Seed = 33;
 }
 
 //Only Active in DEBUG Mode
@@ -214,12 +230,14 @@ SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 
 	//Use the Interface (IAssignmentInterface) to 'interface' with the AI_Framework
 	AgentInfo agentInfo = m_pInterface->Agent_GetInfo();
-	m_pGrid->Update(m_pInterface);
+	m_pGrid->Update(m_pInterface, dt);
+	m_pHouseManager->Update(dt, m_pBlackboard, agentInfo);
 
 #ifndef _DEBUG
 	m_Target = m_pGrid->GetNextAvailableCellPos(agentInfo.Position);
 	m_pBlackboard->ChangeData("Target", m_Target);
 #endif // !_DEBUG
+
 	m_pBehaviors->pDecisionMaking->Update(dt);
 
 	auto nextTargetPos = m_pInterface->NavMesh_GetClosestPathPoint(m_Target);
@@ -229,6 +247,22 @@ SteeringPlugin_Output Plugin::UpdateSteering(float dt)
 		return{};
 	}
 	auto steering = pBehavior->CalculateSteering(dt, agentInfo);
+
+	if (m_IsTurning)
+	{
+		m_CurrentTurningTime += dt;
+	}
+
+	if (m_CurrentTurningTime >= m_MaxTimeToTurn)
+	{
+		m_IsTurning = false;
+		m_pBlackboard->ChangeData("CanTurn", m_IsTurning);
+	}
+
+	if (!m_IsTurning)
+	{
+		m_CurrentTurningTime = 0;
+	}
 
 	//Use the navmesh to calculate the next navmesh point
 	//auto nextTargetPos = m_pInterface->NavMesh_GetClosestPathPoint(checkpointLocation);

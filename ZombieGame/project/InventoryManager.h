@@ -13,7 +13,8 @@ public:
 	void SetGrabItem(const bool canGrabItem) { m_GrabItem = canGrabItem; };
 	bool CanGrabItem() const { return m_GrabItem; };
 	bool IsFull() const { return m_IsFull; };
-	bool IsEmpty() const { return m_AmountOfItems == 0; };
+
+	int GetItemAmount(eItemType type, IExamInterface* pInterface) const;
 
 	bool GetItem(IExamInterface* pInterface, eItemType type, ItemInfo& item, int& slot);
 
@@ -21,7 +22,8 @@ public:
 private:
 	bool m_IsFull = false;
 	bool m_GrabItem = false;
-	const int m_TotalSlots = 5;
+	const static int m_TotalSlots = 5;
+	int m_AmountsPerItem[m_TotalSlots]{};
 	int m_AmountOfItems{};
 };
 

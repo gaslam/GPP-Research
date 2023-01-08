@@ -15,6 +15,7 @@
 #include "SteeringBehaviors.h"
 #include "CombinedSteeringBehaviors.h"
 #include "InventoryManager.h"
+#include "HouseManager.h"
 
 using namespace Elite;
 
@@ -133,7 +134,6 @@ namespace BT_Actions
 		}
 
 		auto agentInfo = pInterface->Agent_GetInfo();
-
 		pBehaviors->pArrive->SetSlowRadius(agentInfo.GrabRange);
 		pBehaviors->pArrive->SetTargetRadius(agentInfo.GrabRange / 4.f);
 		pBehaviors->pArrive->SetTarget(target);
@@ -190,6 +190,8 @@ namespace BT_Actions
 	{
 		ISteeringBehavior* pSteering{ nullptr };
 		SteeringBehaviors* pBehaviors{ nullptr };
+		IExamInterface* pInterface{ nullptr };
+		InventoryManager* pInventory{ nullptr };
 		Vector2 target;
 
 		if (!pBlackboard->GetData("SelectedBehavior", pSteering) || pSteering == nullptr)
@@ -207,19 +209,63 @@ namespace BT_Actions
 			return BehaviorState::Failure;
 		}
 
+		if (!pBlackboard->GetData("Interface", pInterface) || pInterface == nullptr)
+		{
+			return BehaviorState::Failure;
+		}
+
+		if (!pBlackboard->GetData("InventoryManager", pInventory) || pInventory == nullptr)
+		{
+			return BehaviorState::Failure;
+		}
+
 		if (pBehaviors->pEvade == nullptr || pBehaviors->pFace == nullptr || pBehaviors->pEvadeAndFace == nullptr)
 		{
 			return BehaviorState::Failure;
 		}
 
 		pBehaviors->pEvade->SetTarget(target);
-		pBehaviors->pEvade->SetRadius(7.5f);
+		pBehaviors->pEvade->SetRadius(3.5f);
 		pBehaviors->pFace->SetTarget(target);
 		pSteering = pBehaviors->pEvadeAndFace;
 
 		if (!pBlackboard->ChangeData("SelectedBehavior", pSteering))
 		{
 			return BehaviorState::Failure;
+		}
+
+		AgentInfo agent = pInterface->Agent_GetInfo();
+
+		const float shootAngleOffset{ 0.1f };
+		Vector2 agentToTarget{ target - agent.Position };
+		const float newAngle{ agent.Orientation - atan2f(agentToTarget.y, agentToTarget.x)};
+
+		std::cout << abs(newAngle) << "\n";
+
+		if (abs(newAngle) <= shootAngleOffset && abs(newAngle) >= -shootAngleOffset)
+		{
+			ItemInfo item{};
+			int slot{};
+			bool canShoot{ false };
+			if (pInventory->GetItem(pInterface, eItemType::PISTOL, item, slot))
+			{
+				pInventory->UseItem(pInterface, slot);
+				if (pInterface->Weapon_GetAmmo(item) <= 0)
+				{
+					pInventory->RemoveItem(pInterface, slot);
+				}
+				pBlackboard->ChangeData("CanTurn", false);
+			}
+
+			if (pInventory->GetItem(pInterface, eItemType::SHOTGUN, item, slot))
+			{
+				pInventory->UseItem(pInterface, slot);
+				if (pInterface->Weapon_GetAmmo(item) <= 0)
+				{
+					pInventory->RemoveItem(pInterface, slot);
+				}
+				pBlackboard->ChangeData("CanTurn", false);
+			}
 		}
 
 		return BehaviorState::Success;
@@ -246,13 +292,11 @@ namespace BT_Actions
 			return BehaviorState::Failure;
 		}
 
-		if (pBehaviors->pEvade == nullptr || pBehaviors->pFace == nullptr || pBehaviors->pEvadeAndFace == nullptr)
+		if (pBehaviors->pTurn == nullptr)
 		{
 			return BehaviorState::Failure;
 		}
-
-		pBehaviors->pFace->SetTarget(target);
-		pSteering = pBehaviors->pFace;
+		pSteering = pBehaviors->pTurn;
 
 		if (!pBlackboard->ChangeData("SelectedBehavior", pSteering))
 		{
@@ -453,33 +497,44 @@ namespace BT_Conditions
 			return false;
 		}
 
-		//if (!pManager->PlayerUsesWeapon())
-		//{
-		//	return false;
-		//}
+		bool hasWeapon{ false };
 
-		ItemInfo info = {};
-
-		if (info.Type != eItemType::SHOTGUN && info.Type != eItemType::PISTOL)
+		if (pManager->GetItemAmount(eItemType::PISTOL, pInterface) > 0 || pManager->GetItemAmount(eItemType::SHOTGUN, pInterface) > 0)
 		{
+			hasWeapon = true;
+		}
+
+		if (!hasWeapon)
+		{
+			pBlackboard->ChangeData("CanTurn", false);
 			return false;
 		}
 
+		ItemInfo item{};
+		int slot{};
+		if (pManager->GetItem(pInterface, eItemType::PISTOL, item, slot))
+		{
+			if (pInterface->Weapon_GetAmmo(item) > 0)
+			{
+				return true;
+			}
+			pManager->RemoveItem(pInterface, slot);
+		}
 
+		if (pManager->GetItem(pInterface, eItemType::SHOTGUN, item, slot))
+		{
+			if (pInterface->Weapon_GetAmmo(item) > 0)
+			{
+				return true;
+			}
+			pManager->RemoveItem(pInterface, slot);
+		}
 
-		//const int ammo = pInterface->Weapon_GetAmmo(test);
-
-		//if (ammo <= 0)
-		//{
-		//	return false;
-		//}
 
 		return false;
 
 	}
 
-
-	bool enemyAttacked{ false };
 	inline bool IsEnemyInFov(Blackboard* pBlackboard)
 	{
 		std::vector<EntityInfo> enemiesInFov{};
@@ -499,7 +554,6 @@ namespace BT_Conditions
 				if (ei.Type == eEntityType::ENEMY)
 				{
 					enemiesInFov.push_back(ei);
-					enemyAttacked = false;
 				}
 				continue;
 			}
@@ -527,6 +581,11 @@ namespace BT_Conditions
 		{
 			return false;
 		}
+
+		if (agentInfo.Position.DistanceSquared(closestEnemy.Location) <= 3.5f * 3.5f)
+		{
+			pBlackboard->ChangeData("CanTurn", false);
+		}
 		return true;
 	}
 
@@ -534,43 +593,37 @@ namespace BT_Conditions
 	{
 		IExamInterface* pInterface{ nullptr };
 		InventoryManager* pManager{ nullptr };
-		SteeringBehaviors* pBehaviors{ nullptr };
-		Vector2 target{};
+		bool canTurn{};
 
 		if (!pBlackboard->GetData("Interface", pInterface) || pInterface == nullptr)
 		{
 			return false;
 		}
 
-		if (!pBlackboard->GetData("AgentFleeTarget", target))
+		if (!pBlackboard->GetData("CanTurn", canTurn))
 		{
 			return false;
+		}
+
+		if (canTurn)
+		{
+			return true;
 		}
 
 		auto agentInfo = pInterface->Agent_GetInfo();
-		target = agentInfo.Position;
 
-		if (agentInfo.Bitten && !enemyAttacked)
+		if (agentInfo.Bitten)
 		{
-			enemyAttacked = true;
-			target = agentInfo.Position + (-agentInfo.LinearVelocity);
+			canTurn = true;
 
-			if (!pBlackboard->ChangeData("AgentFleeTarget", target))
+			if (!pBlackboard->ChangeData("CanTurn", canTurn))
 			{
 				return false;
 			}
-		}
-		if (!enemyAttacked)
-		{
-			return false;
+			return true;
 		}
 
-		if (!pBlackboard->GetData("Behaviors", pBehaviors) || pBehaviors == nullptr)
-		{
-			return false;
-		}
-
-		return true;
+		return false;
 	}
 
 	inline bool IsPlayerInPurgeZone(Blackboard* pBlackboard)
@@ -742,7 +795,7 @@ namespace BT_Conditions
 			return false;
 		}
 
-		if (pInventory->IsEmpty())
+		if (pInventory->GetItemAmount(eItemType::MEDKIT,pInterface) <= 0)
 		{
 			return false;
 		}
@@ -783,7 +836,7 @@ namespace BT_Conditions
 			return false;
 		}
 
-		if (pInventory->IsEmpty())
+		if (pInventory->GetItemAmount(eItemType::FOOD, pInterface) <= 0)
 		{
 			return false;
 		}
@@ -797,6 +850,10 @@ namespace BT_Conditions
 		}
 
 		int energy = pInterface->Food_GetEnergy(item);
+		if (energy < 1)
+		{
+			return false;
+		}
 
 		auto agentInfo = pInterface->Agent_GetInfo();
 
@@ -806,6 +863,96 @@ namespace BT_Conditions
 		}
 
 		return false;
+	}
+
+	inline bool IsHouseInPlayerFOV(Blackboard* pBlackboard)
+	{
+		IExamInterface* pInterface{ nullptr };
+		HouseManager* pHouseManager{ nullptr };
+
+		if (!pBlackboard->GetData("Interface", pInterface) || pInterface == nullptr)
+		{
+			return false;
+		}
+
+		if (!pBlackboard->GetData("HouseManager", pHouseManager) || pHouseManager == nullptr)
+		{
+			return false;
+		}
+
+		for (int i = 0;; ++i)
+		{
+			HouseInfo houseInfo{};
+			if (pInterface->Fov_GetHouseByIndex(i,houseInfo))
+			{
+				if (!pHouseManager->IsAlreadyFound(houseInfo.Center))
+				{
+					pHouseManager->Add(houseInfo);
+				}
+				continue;
+			}
+			break;
+		}
+
+		int amountOfUnvisitedHouses = pHouseManager->GetAmountOfHousesToVisit();
+
+		if (amountOfUnvisitedHouses <= 0)
+		{
+			return false;
+		}
+
+		return true;
+	}
+
+	inline bool CanPlayerVisitNextHouse(Blackboard* pBlackboard)
+	{
+		IExamInterface* pInterface{ nullptr };
+		HouseManager* pHouseManager{ nullptr };
+		Vector2 target{};
+
+		if (!pBlackboard->GetData("Interface", pInterface) || pInterface == nullptr)
+		{
+			return false;
+		}
+
+		if (!pBlackboard->GetData("HouseManager", pHouseManager) || pHouseManager == nullptr)
+		{
+			return false;
+		}
+
+		if (!pBlackboard->GetData("Target", target))
+		{
+			return false;
+		}
+
+		AgentInfo agent = pInterface->Agent_GetInfo();
+
+		HouseInfo house{};
+
+		if (!pHouseManager->GetNextAvailableHouse(house))
+		{
+			return false;
+		}
+
+		target = house.Center;
+
+		if (!pBlackboard->ChangeData("Target", target))
+		{
+			return false;
+		}
+
+		return true;
+	}
+
+	inline bool IsPlayerNotTurning(Blackboard* pBlackboard)
+	{
+		bool isTurning{};
+
+		if (!pBlackboard->GetData("CanTurn", isTurning))
+		{
+			return false;
+		}
+		return !isTurning;
 	}
 }
 

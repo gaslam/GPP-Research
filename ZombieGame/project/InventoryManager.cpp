@@ -18,6 +18,7 @@ bool InventoryManager::GrabItem(IExamInterface* pInterface, EntityInfo& entity, 
 		{
 			m_GrabItem = false;
 			itemAdded = true;
+			m_AmountsPerItem[static_cast<int>(item.Type)]++;
 			++m_AmountOfItems;
 		}
 		if (itemAdded)
@@ -42,10 +43,20 @@ bool InventoryManager::UseItem(IExamInterface* pInterface, int slot)
 bool InventoryManager::RemoveItem(IExamInterface* pInterface, int slot)
 {
 	//Remove an item from a inventory slot
+
+	ItemInfo item{};
+	if (!pInterface->Inventory_GetItem(slot, item))
+	{
+		return false;
+	}
+
 	if (!pInterface->Inventory_RemoveItem(slot))
 	{
 		return false;
 	}
+
+	--m_AmountsPerItem[static_cast<int>(item.Type)];
+
 	--m_AmountOfItems;
 	m_IsFull = false;
 	return true;
@@ -73,4 +84,10 @@ bool InventoryManager::GetItemInfo(IExamInterface* pInterface, EntityInfo& entit
 		return true;
 	}
 	return false;
+}
+
+int InventoryManager::GetItemAmount(eItemType type,IExamInterface* pInterface) const
+{
+	int count{ m_AmountsPerItem[static_cast<int>(type)] };
+	return count;
 }

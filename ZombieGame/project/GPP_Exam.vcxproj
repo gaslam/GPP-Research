@@ -188,6 +188,7 @@
     <ClInclude Include="EBlackboard.h" />
     <ClInclude Include="EDecisionMaking.h" />
     <ClInclude Include="Grid.h" />
+    <ClInclude Include="HouseManager.h" />
     <ClInclude Include="InventoryManager.h" />
     <ClInclude Include="Plugin.h" />
     <ClInclude Include="stdafx.h" />
@@ -199,6 +200,7 @@
     <ClCompile Include="CombinedSteeringBehaviors.cpp" />
     <ClCompile Include="EBehaviorTree.cpp" />
     <ClCompile Include="Grid.cpp" />
+    <ClCompile Include="HouseManager.cpp" />
     <ClCompile Include="InventoryManager.cpp" />
     <ClCompile Include="Plugin.cpp" />
     <ClCompile Include="stdafx.cpp">

@@ -8,6 +8,7 @@
     <ClCompile Include="EBehaviorTree.cpp" />
     <ClCompile Include="Grid.cpp" />
     <ClCompile Include="InventoryManager.cpp" />
+    <ClCompile Include="HouseManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Plugin.h" />
@@ -22,5 +23,6 @@
     <ClInclude Include="EBlackboard.h" />
     <ClInclude Include="EDecisionMaking.h" />
     <ClInclude Include="Grid.h" />
+    <ClInclude Include="HouseManager.h" />
   </ItemGroup>
 </Project>

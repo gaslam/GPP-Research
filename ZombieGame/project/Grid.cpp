@@ -72,10 +72,24 @@ void Grid::DrawGrid(IExamInterface* pInterface) const
 	}
 }
 
-void Grid::Update(IExamInterface* pInterface)
+void Grid::Update(IExamInterface* pInterface,float dt)
 {
 		AgentInfo agentInfo = pInterface->Agent_GetInfo();
 		MarkCellVisited(agentInfo.Position);
+		for (Cell& cell : m_Cells)
+		{
+			if (!cell.visited)
+			{
+				continue;
+			}
+
+			cell.currentTimePassed += dt;
+			if (cell.currentTimePassed >= m_TimeToBecomeUnvisitedAgain)
+			{
+				cell.visited = false;
+				cell.currentTimePassed = 0;
+			}
+		}
 }
 
 Vector2 Grid::GetNextAvailableCellPos(Elite::Vector2& agentPos)

@@ -9,12 +9,14 @@ class Grid final
 public:
 	Grid(IExamInterface* pInterface, int rowsAndCols = 50);
 	void DrawGrid(IExamInterface* pInterface) const;
-	void Update(IExamInterface* pInterface);
+	void Update(IExamInterface* pInterface, float dt);
 	Elite::Vector2 GetNextAvailableCellPos(Elite::Vector2& agentPos);
 private:
+	float m_TimeToBecomeUnvisitedAgain{60.f};
 	struct Cell {
 		Elite::Vector2 center{};
 		Elite::Vector2 bottom{};
+		float currentTimePassed{};
 		bool visited = false;
 	};
 	int m_RowsAndCols;

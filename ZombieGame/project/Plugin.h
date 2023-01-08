@@ -1,13 +1,14 @@
 #pragma once
 #include "IExamPlugin.h"
 #include "Exam_HelperStructs.h"
-#include "EBlackboard.h"
 #include "Behaviors.h"
+#include "EBlackboard.h"
 
 class IBaseInterface;
 class IExamInterface;
 class ISteeringBehavior;
 class InventoryManager;
+class HouseManager;
 class Grid;
 class Plugin :public IExamPlugin
 {
@@ -33,10 +34,15 @@ private:
 
 	SteeringBehaviors* m_pBehaviors{new SteeringBehaviors()};
 	InventoryManager* m_pInventoryManager{nullptr};
+	HouseManager* m_pHouseManager{nullptr};
 	Grid* m_pGrid{};
 
 	Elite::Vector2 m_Target = {};
 	bool m_CanRun = false; //Demo purpose
+	bool m_IsTurning = false;
+	float m_MaxTimeToTurn{ 10.f };
+	float m_CurrentTurningTime{};
+	float m_TurnedRad{};
 	float m_AngSpeed = 0.f; //Demo purpose
 
 };
